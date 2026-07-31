@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ .Site.Title }} — the pkgx world in pure Go, runs on FROM scratch</title>
+<meta name="description" content="go-pkgx — the pkgx world in pure Go (CGO=0): a runtime (pkgx), an installer (pkgm), and their shared bottle backend. Single static binaries that run and install packages on a FROM scratch image with no runtime dependencies of their own.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1b1f24; --muted: #57606a; --card: #f6f8fa;
+    --border: #d8dbe6; --accent: #B45309; --accent-2: #F59E0B; --accent-fg: #ffffff;
+    --ready: #1a7f37; --active: #7c3aed; --planned: #9a6700;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      --bg: #0b0d12; --fg: #e6e8f0; --muted: #9aa0b4; --card: #141826;
+      --border: #262c40; --accent: #F59E0B; --accent-2: #FBBF24; --accent-fg: #0b0d12;
+      --ready: #3fb950; --active: #a78bfa; --planned: #d29922;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0d12; --fg: #e6e8f0; --muted: #9aa0b4; --card: #141826;
+    --border: #262c40; --accent: #F59E0B; --accent-2: #FBBF24; --accent-fg: #0b0d12;
+    --ready: #3fb950; --active: #a78bfa; --planned: #d29922;
+  }
+  .theme-toggle {
+    position: fixed; top: 14px; right: 14px; z-index: 10;
+    font: inherit; font-size: .8rem; cursor: pointer; padding: 6px 12px;
+    color: var(--fg); background: var(--card); border: 1px solid var(--border); border-radius: 999px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+  header {
+    padding: 84px 0 40px; text-align: center;
+    background:
+      radial-gradient(900px 320px at 50% -40px, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 70%);
+  }
+  .logo { display: block; margin: 0 auto 18px; border-radius: 22px; filter: drop-shadow(0 8px 28px color-mix(in srgb, var(--accent) 35%, transparent)); }
+  h1 { font-size: 2.7rem; margin: 0 0 .3em; letter-spacing: -.02em; }
+  .tagline { font-size: 1.2rem; color: var(--muted); margin: 0 auto; max-width: 660px; }
+  .pills { margin: 22px 0 0; }
+  .pill {
+    display: inline-block; margin: 4px; padding: 3px 10px; font-size: .82rem;
+    color: var(--muted); background: var(--card); border: 1px solid var(--border); border-radius: 999px;
+  }
+  .cta { margin: 30px 0 0; }
+  .badges { margin: 18px 0 0; }
+  .badges a { margin: 0 3px; text-decoration: none; }
+  .badges img { vertical-align: middle; }
+  .btn {
+    display: inline-block; padding: 10px 18px; margin: 4px; border-radius: 8px; text-decoration: none;
+    font-weight: 600; border: 1px solid var(--border);
+  }
+  .btn.primary { background: linear-gradient(135deg, var(--accent-2), var(--accent)); color: var(--accent-fg); border-color: var(--accent); }
+  .btn.ghost { color: var(--fg); background: transparent; }
+  .lead { color: var(--fg); max-width: 760px; margin: 8px auto 0; text-align: center; }
+  .lead code { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; padding: 24px 0 8px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .card h3 { margin: 0 0 .35em; font-size: 1.2rem; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .card h3 a { color: inherit; text-decoration: none; }
+  .card h3 a:hover { text-decoration: underline; }
+  .card p { margin: 0; color: var(--fg); }
+  .card p code { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
+  .card .links { margin-top: 10px; font-size: .82rem; }
+  .card .links a { margin-right: 10px; }
+  .status { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; }
+  .status.ready { color: var(--ready); }
+  .status.active { color: var(--active); }
+  .status.planned { color: var(--planned); }
+  pre.snippet { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; overflow-x: auto; font-size: .9rem; margin: 24px auto; max-width: 760px; }
+  .replaces { color: var(--muted); text-align: center; max-width: 760px; margin: 18px auto 0; padding: 14px 18px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+  .principles { color: var(--muted); text-align: center; padding: 10px 0 0; }
+  footer { color: var(--muted); text-align: center; padding: 40px 0 56px; font-size: .9rem; }
+  a { color: var(--accent); }
+</style>
+<script>
+  (function(){var m=localStorage.getItem('theme');if(m&&m!=='system')document.documentElement.setAttribute('data-theme',m);})();
+</script>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+  <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle light, dark or system theme"><span id="theme-label">🖥️ System</span></button>
+  <header class="wrap">
+    <img class="logo" width="88" height="88" alt="go-pkgx" src="/img/logo.svg">
+    <h1>go-pkgx</h1>
+    <p class="tagline">The pkgx world in pure Go — run and install packages on <code>FROM scratch</code>, with one static binary each and a shared backend.</p>
+    <div class="pills">
+      <span class="pill">pure Go · CGO=0</span>
+      <span class="pill">one static binary each</span>
+      <span class="pill">zero runtime deps</span>
+      <span class="pill">runs FROM scratch</span>
+      <span class="pill">shared backend</span>
+      <span class="pill">BSD-3-Clause</span>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/go-pkgx/pkgx">pkgx</a>
+      <a class="btn ghost" href="https://github.com/go-pkgx/pkgm">pkgm</a>
+      <a class="btn ghost" href="https://go-pkgx.github.io/docs/">docs</a>
+      <a class="btn ghost" href="https://github.com/go-pkgx">org</a>
+    </div>
+    <div class="badges">
+      <a href="https://pkg.go.dev/github.com/go-pkgx/pkgx"><img alt="pkg.go.dev" src="https://img.shields.io/badge/pkg.go.dev-pkgx-007d9c?logo=go&amp;logoColor=white"></a>
+      <img alt="Go" src="https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go&amp;logoColor=white">
+      <img alt="License" src="https://img.shields.io/badge/license-BSD--3--Clause-blue">
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="lead"><strong>go-pkgx</strong> is the pkgx world rebuilt in pure <code>CGO_ENABLED=0</code> Go:
+      a <strong>runtime</strong> (<code>pkgx</code>) that runs packages on the fly, an <strong>installer</strong>
+      (<code>pkgm</code>) that mirrors the reference CLI, and the <strong>bottle</strong> backend they both
+      share. The reference tools shell out to pkgx + deno + curl + openssl + xz &mdash; ~<strong>515&nbsp;MB</strong>
+      of runtime closure. These replace all of it with single ~9&nbsp;MB static binaries that need no libc at
+      all &mdash; so they run on a literally-empty <code>FROM scratch</code> image and materialise real packages
+      there.</p>
+
+    <pre class="snippet"><code># a FROM scratch image whose ONLY file is the pkgx binary
+FROM scratch
+COPY pkgx /bin/pkgx
+ENV PKGX_DIR=/pkgx
+ENTRYPOINT ["/bin/pkgx"]
+
+$ docker run --rm pkgx-scratch gnu.org/wget --version
+GNU Wget 1.25.0 built on linux-gnu.
+
+$ docker run --rm pkgx-scratch +sqlite.org -- sqlite3 --version   # bring pkgs into env
+3.53.4 2026-07-24 …</code></pre>
+
+    <section class="grid">
+      {{ range .Site.Params.repos }}
+      <article class="card">
+        <h3><a href="{{ .url }}">{{ .name }}</a> <span class="status {{ .status }}">{{ .status }}</span></h3>
+        <p>{{ .blurb | markdownify }}</p>
+        <div class="links">
+          <a href="{{ .url }}">repo</a>
+          <a href="https://pkg.go.dev/{{ .pkg }}">pkg.go.dev</a>
+        </div>
+      </article>
+      {{ end }}
+    </section>
+
+    <p class="replaces">
+      <strong>One backend, no duplication:</strong> both tools import <code>go-pkgx/bottle</code> — the single
+      source of truth for the pkgx bottle protocol. <code>net/http</code> (with an embedded CA bundle) replaces
+      curl+openssl, <code>compress/gzip</code> + a pure-Go xz decoder replace info-zip+xz, and there is no
+      script runtime at all. pkgm's command surface and prefix logic mirror the reference pkgm, so it is a
+      <strong>drop-in replacement</strong>; pkgx's <code>&lt;pkg&gt;</code> and <code>+pkg</code> forms mirror
+      the reference runtime.
+    </p>
+
+    <p class="principles">Pure Go with cgo disabled &mdash; no C toolchain, no runtime fetch, no vendored
+      assets &mdash; binaries that cross-compile to <strong>six 64-bit targets</strong> (linux &amp; darwin,
+      amd64/arm64, plus riscv64 &amp; ppc64le). On <code>FROM scratch</code> the bottle backend reads each
+      bottle's ELF <code>DT_NEEDED</code> to auto-complete the implicit libc/gcc closure the pantry graph
+      omits, pulling the provider version that ships the <em>exact</em> soname an ABI needs. Everything is
+      <strong>BSD-3-Clause</strong>.</p>
+  </main>
+
+  <footer class="wrap">
+    BSD-3-Clause · <a href="https://github.com/go-pkgx">github.com/go-pkgx</a>
+  </footer>
+  <script>
+  (function(){
+    var order=['system','light','dark'], root=document.documentElement;
+    var labels={system:'🖥️ System',light:'☀️ Light',dark:'🌙 Dark'};
+    function apply(m){ if(m==='system'){root.removeAttribute('data-theme');}else{root.setAttribute('data-theme',m);} localStorage.setItem('theme',m); var el=document.getElementById('theme-label'); if(el)el.textContent=labels[m]; }
+    var mode=localStorage.getItem('theme')||'system'; apply(mode);
+    var btn=document.getElementById('theme-toggle');
+    if(btn) btn.addEventListener('click',function(){ mode=order[(order.indexOf(mode)+1)%order.length]; apply(mode); });
+  })();
+  </script>
+</body>
+</html>

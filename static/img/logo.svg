@@ -1,0 +1,9 @@
+<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="go-pkgm">
+  <defs><linearGradient id="pkgmgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs>
+  <rect width="256" height="256" rx="56" fill="url(#pkgmgrad)"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="15" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M128 58 L198 96 L198 160 L128 198 L58 160 L58 96 Z"/>
+    <path d="M58 96 L128 132 L198 96"/>
+    <path d="M128 132 L128 198"/>
+  </g>
+</svg>

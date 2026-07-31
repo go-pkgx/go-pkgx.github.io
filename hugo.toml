@@ -1,0 +1,34 @@
+baseURL = "https://go-pkgx.github.io/"
+title = "go-pkgx"
+disableKinds = ["taxonomy", "term", "RSS", "sitemap", "404"]
+
+[markup.goldmark.renderer]
+  unsafe = true
+
+[[params.repos]]
+  name = "pkgx"
+  pkg = "github.com/go-pkgx/pkgx"
+  url = "https://github.com/go-pkgx/pkgx"
+  status = "ready"
+  blurb = "The **runtime**. Run any package on the fly — `pkgx node@22 --version` — or bring several into an environment — `pkgx +git +gnu.org/bash -- ./build.sh`. It materialises each package's full dependency closure on demand and execs through the pkgx glibc loader, so it works on a literally-empty **`FROM scratch`** image. A single `CGO_ENABLED=0` binary."
+
+[[params.repos]]
+  name = "pkgm"
+  pkg = "github.com/go-pkgx/pkgm"
+  url = "https://github.com/go-pkgx/pkgm"
+  status = "ready"
+  blurb = "The **installer**. Resolves a package's runtime closure from the pkgx pantry, downloads the bottles, and installs them — mirroring the reference pkgm CLI (`install`/`uninstall`/`shim`/`list`/`outdated`/`update`/`pin`) as a **drop-in replacement**, plus a `run` that completes the closure from ELF `DT_NEEDED` and runs it on **`FROM scratch`**."
+
+[[params.repos]]
+  name = "bottle"
+  pkg = "github.com/go-pkgx/bottle"
+  url = "https://github.com/go-pkgx/bottle"
+  status = "ready"
+  blurb = "The **shared backend** both tools import — one source of truth for the pkgx bottle protocol: resolution, download, **soname-exact `FROM scratch` closure completion**, and loader-aware exec. `net/http` with an embedded CA bundle replaces curl+openssl; `compress/gzip` + a pure-Go xz decoder replace info-zip+xz."
+
+[[params.repos]]
+  name = "docs"
+  pkg = "github.com/go-pkgx/pkgx"
+  url = "https://go-pkgx.github.io/docs/"
+  status = "ready"
+  blurb = "Documentation (MkDocs Material): usage, the **full-pantry FROM-scratch conformance sweep** (1818 projects), and the maintained `soname → project` fix list. A pantry-wide audit found **1818 of 1896** projects publish a linux bottle, and after the soname-exact fix **73 of 81** previously-failing projects run on scratch."
