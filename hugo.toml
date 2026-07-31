@@ -27,6 +27,13 @@ disableKinds = ["taxonomy", "term", "RSS", "sitemap", "404"]
   blurb = "The **shared backend** both tools import — one source of truth for the pkgx bottle protocol: resolution, download, **soname-exact `FROM scratch` closure completion**, and loader-aware exec. `net/http` with an embedded CA bundle replaces curl+openssl; `compress/gzip` + a pure-Go xz decoder replace info-zip+xz."
 
 [[params.repos]]
+  name = "mirror"
+  pkg = "github.com/go-pkgx/mirror"
+  url = "https://github.com/go-pkgx/mirror"
+  status = "ready"
+  blurb = "**Sync a local mirror** of pkgx bottles from the official dist into the same servable tree layout — per os/arch, incremental, with `--closure` to pull a package's full runtime closure (plus the implicit `FROM scratch` system libs). Serve it statically and point pkgm/pkgx at it with `PKGX_DIST=<mirror-url>`."
+
+[[params.repos]]
   name = "docs"
   pkg = "github.com/go-pkgx/pkgx"
   url = "https://go-pkgx.github.io/docs/"
