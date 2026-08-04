@@ -75,6 +75,13 @@
   pre.snippet { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; overflow-x: auto; font-size: .9rem; margin: 24px auto; max-width: 760px; }
   .replaces { color: var(--muted); text-align: center; max-width: 760px; margin: 18px auto 0; padding: 14px 18px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
   .principles { color: var(--muted); text-align: center; padding: 10px 0 0; }
+  .install { max-width: 760px; margin: 30px auto 0; padding: 22px 24px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+  .install h2 { margin: 0 0 .4em; font-size: 1.5rem; letter-spacing: -.01em; }
+  .install p { margin: 0 0 8px; color: var(--fg); }
+  .install code { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
+  .install .install-os { margin: 16px 0 4px; font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .install .snippet { margin: 0; max-width: none; }
+  .install .install-note { margin: 16px 0 0; font-size: .9rem; color: var(--muted); }
   .registry { max-width: 760px; margin: 32px auto 0; padding: 22px 24px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
   .registry h2 { margin: 0 0 .5em; font-size: 1.5rem; letter-spacing: -.01em; }
   .registry p { margin: 0 0 12px; color: var(--fg); }
@@ -125,6 +132,20 @@
       of runtime closure. These replace all of it with single ~9&nbsp;MB static binaries that need no libc at
       all &mdash; so they run on a literally-empty <code>FROM scratch</code> image and materialise real packages
       there.</p>
+
+    <section class="install">
+      <h2>Install pkgm</h2>
+      <p>One line — downloads the static binary for your os/arch from the latest
+        release, verifies it against the release <code>SHA256SUMS</code>, and puts
+        <code>pkgm</code> on your <code>PATH</code>.</p>
+      <p class="install-os">Linux / macOS</p>
+      <pre class="snippet"><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh</code></pre>
+      <p class="install-os">Windows (PowerShell)</p>
+      <pre class="snippet"><code>irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
+      <p class="install-note">Go users: <code>go install github.com/go-pkgx/pkgm@latest</code>.
+        Then <code>pkgm install lz4.org</code> — installs verify against the signed
+        registry by default.</p>
+    </section>
 
     <pre class="snippet"><code># a FROM scratch image whose ONLY file is the pkgx binary
 FROM scratch
