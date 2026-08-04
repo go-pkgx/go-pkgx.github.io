@@ -7,9 +7,16 @@
 
       irm https://go-pkgx.github.io/install.ps1 | iex
 
-  Downloads the static pkgm.exe for your architecture from the latest GitHub
-  release, verifies it against the release SHA256SUMS, installs it to
+  Downloads the static pkgm.exe for your architecture from a GitHub release,
+  verifies it against the release SHA256SUMS, installs it to
   $env:LOCALAPPDATA\Programs\go-pkgx, and adds that directory to the user PATH.
+  Idempotent: re-running is the updater — it resolves the target version and
+  skips the download if that version is already installed.
+
+  Env:
+    PKGM_VERSION   install a specific version (e.g. v0.1.0 or 0.1.0);
+                   default: the latest release
+    PKGM_FORCE     set to 1 to re-download/reinstall even if already current
 
   BSD-3-Clause (c) the go-pkgx authors.
 #>
@@ -17,7 +24,6 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repo = 'go-pkgx/pkgm'
-$base = "https://github.com/$repo/releases/latest/download"
 
 function Fail([string]$msg) {
   Write-Error "pkgm-install: $msg"
@@ -36,13 +42,39 @@ $asset = "pkgm-windows-$arch.exe"
 $installDir = Join-Path $env:LOCALAPPDATA 'Programs\go-pkgx'
 $dest = Join-Path $installDir 'pkgm.exe'
 
+# --- resolve the target version ----------------------------------------------
+if ($env:PKGM_VERSION) {
+  $tag = $env:PKGM_VERSION
+  if ($tag -notmatch '^v') { $tag = "v$tag" }  # normalise to vX.Y.Z
+} else {
+  try {
+    $tag = (Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -UseBasicParsing).tag_name
+  } catch {
+    Fail "could not resolve the latest pkgm version ($($_.Exception.Message))"
+  }
+}
+if (-not $tag) { Fail 'could not resolve the target pkgm version' }
+$wantVer = $tag.TrimStart('v')
+$base = "https://github.com/$repo/releases/download/$tag"
+
+# --- skip if already at the target version (unless forced) -------------------
+if ($env:PKGM_FORCE -ne '1' -and (Test-Path -LiteralPath $dest)) {
+  $cur = $null
+  try { $cur = (& $dest --version 2>$null | Select-Object -First 1).Split(' ')[-1] } catch { $cur = $null }
+  if ($cur -eq $wantVer) {
+    Write-Host "pkgm-install: pkgm $wantVer already installed at $dest (set PKGM_FORCE=1 to reinstall)"
+    return
+  }
+  if ($cur) { Write-Host "pkgm-install: updating pkgm $cur -> $wantVer" }
+}
+
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("pkgm-install-" + [System.Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tmp -Force | Out-Null
 try {
   $binTmp = Join-Path $tmp $asset
   $sumsTmp = Join-Path $tmp 'SHA256SUMS'
 
-  Write-Host "pkgm-install: downloading $asset"
+  Write-Host "pkgm-install: downloading $asset $tag"
   try {
     Invoke-WebRequest -Uri "$base/$asset" -OutFile $binTmp -UseBasicParsing
   } catch {
@@ -75,7 +107,7 @@ try {
   # --- install ---------------------------------------------------------------
   New-Item -ItemType Directory -Path $installDir -Force | Out-Null
   Move-Item -LiteralPath $binTmp -Destination $dest -Force
-  Write-Host "pkgm-install: installed pkgm to $dest"
+  Write-Host "pkgm-install: installed pkgm $wantVer to $dest"
 
   # --- add to user PATH ------------------------------------------------------
   $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')

@@ -142,8 +142,11 @@
       <pre class="snippet"><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh</code></pre>
       <p class="install-os">Windows (PowerShell)</p>
       <pre class="snippet"><code>irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
-      <p class="install-note">Go users: <code>go install github.com/go-pkgx/pkgm@latest</code>.
-        Then <code>pkgm install lz4.org</code> — installs verify against the signed
+      <p class="install-note">Re-running is the updater — it skips the download when
+        the target version is already installed. Pin a version with
+        <code>PKGM_VERSION=v0.1.0</code>, force a reinstall with <code>PKGM_FORCE=1</code>.
+        Go users: <code>go install github.com/go-pkgx/pkgm@latest</code>. Then
+        <code>pkgm install lz4.org</code> — installs verify against the signed
         registry by default.</p>
     </section>
 
