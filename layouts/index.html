@@ -157,8 +157,12 @@ $ docker run --rm pkgx-scratch +sqlite.org -- sqlite3 --version   # bring pkgs i
         <code>ghcr.io/go-pkgx/packages</code>. A pure-Go factory builds
         <a href="https://github.com/pkgxdev/pantry">pkgx pantry</a> recipes with
         <a href="https://github.com/go-pkgx/bk">bk</a> (a CGO-free re-implementation of
-        brewkit) on a <strong>daily</strong> schedule, publishing bottles as OCI
-        artifacts. Auth uses the workflow's <strong>native <code>GITHUB_TOKEN</code></strong>
+        brewkit) for <strong>every platform</strong> — linux (x86-64 &amp; aarch64),
+        darwin (x86-64 &amp; aarch64) and windows (x86-64) — publishing through
+        <strong>two channels</strong>: the signed <code>ghcr.io/go-pkgx/packages</code>
+        OCI registry <strong>and</strong> a GitHub Pages pkgx-dist mirror at
+        <a href="https://go-pkgx.github.io/packages"><code>go-pkgx.github.io/packages</code></a>.
+        Auth uses the workflow's <strong>native <code>GITHUB_TOKEN</code></strong>
         — no long-lived PAT — and every <code>(project, version, platform)</code> already
         in ghcr is skipped, so the catalog grows progressively.</p>
       <p>Each bottle carries, as OCI referrers, a <strong>CycloneDX SBOM</strong>, an
@@ -168,8 +172,11 @@ $ docker run --rm pkgx-scratch +sqlite.org -- sqlite3 --version   # bring pkgs i
         an unsigned or badly-signed bottle is refused. Builds are isolated in a pinned
         <code>debian</code> container today (Phase A), with an experimental FROM-scratch
         pkgx-glibc toolchain proven feasible (Phase B).</p>
-      <pre class="snippet"><code># install from the registry, verifying the signature against the pinned key
+      <pre class="snippet"><code># install from the signed OCI registry, verifying against the pinned key
 $ PKGX_DIST=oci://ghcr.io/go-pkgx/packages PKGX_VERIFY=1 pkgm install lz4.org
+
+# …or from the all-platform GitHub Pages mirror
+$ PKGX_DIST=https://go-pkgx.github.io/packages pkgm install lz4.org
 
 # …or pull a bottle with any OCI client
 $ docker pull ghcr.io/go-pkgx/packages/lz4.org:1.10.0</code></pre>
