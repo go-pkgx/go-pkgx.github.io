@@ -1,27 +1,54 @@
 #!/bin/sh
-# pkgm installer — the pure-Go pkgx package manager.
+# go-pkgx installer — the pure-Go pkgx family (pkgm, pkgx, mirror).
 #
-#   curl -fsSL https://go-pkgx.github.io/install.sh | sh
+#   curl -fsSL https://go-pkgx.github.io/install.sh | sh            # pkgm (default)
+#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx # a specific tool
 #
-# Downloads the static, dependency-free pkgm binary for your os/arch from a
-# GitHub release, verifies it against the release SHA256SUMS, and installs it to
-# ${PKGM_INSTALL:-$HOME/.local/bin}. Idempotent: re-running is the updater — it
+# Selects one of {pkgm, pkgx, mirror}, downloads its static, dependency-free
+# binary for your os/arch from a GitHub release, verifies it against the release
+# SHA256SUMS, and installs it. Idempotent: re-running is the updater — it
 # resolves the target version and skips the download if that version is already
 # installed (so `curl … | sh` on a cron is a safe self-update).
 #
-# Env:
-#   PKGM_INSTALL   install directory (default: $HOME/.local/bin)
-#   PKGM_VERSION   install a specific version (e.g. v0.1.0 or 0.1.0);
-#                  default: the latest release
-#   PKGM_FORCE     set to 1 to re-download/reinstall even if already current
+# Tool selection (default: pkgm, so the bare one-liner is unchanged):
+#   sh -s -- <tool>   positional argument (pkgm | pkgx | mirror)
+#   PKGX_TOOL=<tool>  environment variable (or TOOL=<tool>)
+#
+# Env knobs (per-tool prefix, e.g. PKGM_*, PKGX_*, MIRROR_*; a tool-agnostic
+# TOOL_* is honoured as a fallback):
+#   <TOOL>_INSTALL / TOOL_INSTALL   install directory (default: $HOME/.local/bin)
+#   <TOOL>_VERSION / TOOL_VERSION   install a specific version (e.g. v0.1.0 or
+#                                   0.1.0); default: the latest release
+#   <TOOL>_FORCE   / TOOL_FORCE     set to 1 to re-download/reinstall even if
+#                                   already current
+# (PKGM_INSTALL / PKGM_VERSION / PKGM_FORCE keep working for the default tool.)
 #
 # BSD-3-Clause © the go-pkgx authors.
 set -eu
 
-REPO="go-pkgx/pkgm"
-INSTALL_DIR="${PKGM_INSTALL:-$HOME/.local/bin}"
+# --- select the tool ---------------------------------------------------------
+tool="${1:-${PKGX_TOOL:-${TOOL:-pkgm}}}"
+case "$tool" in
+  pkgm|pkgx|mirror) ;;
+  *) printf 'go-pkgx-install: unknown tool %s (choose one of: pkgm, pkgx, mirror)\n' "'$tool'" >&2; exit 1 ;;
+esac
+tool_upper=$(printf '%s' "$tool" | tr '[:lower:]' '[:upper:]')
 
-err() { printf 'pkgm-install: %s\n' "$1" >&2; exit 1; }
+REPO="go-pkgx/${tool}"
+
+err() { printf '%s-install: %s\n' "$tool" "$1" >&2; exit 1; }
+
+# Resolve a per-tool env knob: <TOOL_UPPER>_<SUFFIX> first (so PKGM_VERSION,
+# PKGX_FORCE, MIRROR_INSTALL keep working), then a tool-agnostic TOOL_<SUFFIX>.
+tool_env() {
+  # shellcheck disable=SC2154  # 'v' is assigned inside the eval'd expression
+  eval "v=\${${tool_upper}_$1:-}"
+  [ -n "$v" ] || eval "v=\${TOOL_$1:-}"
+  printf '%s' "$v"
+}
+
+INSTALL_DIR=$(tool_env INSTALL)
+[ -n "$INSTALL_DIR" ] || INSTALL_DIR="$HOME/.local/bin"
 
 # --- detect platform ---------------------------------------------------------
 os=$(uname -s)
@@ -38,7 +65,7 @@ case "$arch" in
   *) err "unsupported architecture '$arch' (supported: x86_64/amd64, aarch64/arm64)" ;;
 esac
 
-asset="pkgm-${os}-${arch}"
+asset="${tool}-${os}-${arch}"
 
 # --- pick a downloader -------------------------------------------------------
 if command -v curl >/dev/null 2>&1; then
@@ -63,34 +90,36 @@ else
 fi
 
 # --- resolve the target version ----------------------------------------------
-if [ -n "${PKGM_VERSION:-}" ]; then
-  tag=$PKGM_VERSION
+want_version=$(tool_env VERSION)
+if [ -n "$want_version" ]; then
+  tag=$want_version
   case "$tag" in v*) ;; *) tag="v$tag" ;; esac  # normalise to vX.Y.Z
 else
-  tag=$(latest_tag) || err "could not resolve the latest pkgm version"
-  [ -n "$tag" ] || err "could not resolve the latest pkgm version"
+  tag=$(latest_tag) || err "could not resolve the latest ${tool} version"
+  [ -n "$tag" ] || err "could not resolve the latest ${tool} version"
 fi
 want_ver=${tag#v}
 BASE="https://github.com/${REPO}/releases/download/${tag}"
 url="${BASE}/${asset}"
 
 # --- skip if already at the target version (unless forced) -------------------
-if [ "${PKGM_FORCE:-0}" != "1" ] && [ -x "$INSTALL_DIR/pkgm" ]; then
-  cur=$("$INSTALL_DIR/pkgm" --version 2>/dev/null | awk 'NR==1{print $NF}') || cur=
+if [ "$(tool_env FORCE)" != "1" ] && [ -x "$INSTALL_DIR/$tool" ]; then
+  cur=$("$INSTALL_DIR/$tool" --version 2>/dev/null | awk 'NR==1{print $NF}') || cur=
   if [ -n "$cur" ] && [ "$cur" = "$want_ver" ]; then
-    printf 'pkgm-install: pkgm %s already installed at %s/pkgm (PKGM_FORCE=1 to reinstall)\n' "$want_ver" "$INSTALL_DIR" >&2
+    printf '%s-install: %s %s already installed at %s/%s (%s_FORCE=1 to reinstall)\n' \
+      "$tool" "$tool" "$want_ver" "$INSTALL_DIR" "$tool" "$tool_upper" >&2
     exit 0
   fi
-  [ -n "$cur" ] && printf 'pkgm-install: updating pkgm %s -> %s\n' "$cur" "$want_ver" >&2
+  [ -n "$cur" ] && printf '%s-install: updating %s %s -> %s\n' "$tool" "$tool" "$cur" "$want_ver" >&2
 fi
 
-tmp=$(mktemp -d "${TMPDIR:-/tmp}/pkgm-install.XXXXXX") || err "cannot create temp dir"
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/${tool}-install.XXXXXX") || err "cannot create temp dir"
 trap 'rm -rf "$tmp"' EXIT INT TERM
 
-printf 'pkgm-install: downloading %s %s\n' "$asset" "$tag" >&2
+printf '%s-install: downloading %s %s\n' "$tool" "$asset" "$tag" >&2
 dl "$url" "$tmp/$asset" || err "download failed: $url"
 
-printf 'pkgm-install: verifying checksum\n' >&2
+printf '%s-install: verifying checksum\n' "$tool" >&2
 dl "${BASE}/SHA256SUMS" "$tmp/SHA256SUMS" || err "could not download SHA256SUMS"
 
 want=$(grep " ${asset}\$" "$tmp/SHA256SUMS" | cut -d' ' -f1)
@@ -105,9 +134,9 @@ fi
 # --- install -----------------------------------------------------------------
 mkdir -p "$INSTALL_DIR" || err "cannot create $INSTALL_DIR"
 chmod +x "$tmp/$asset"
-mv -f "$tmp/$asset" "$INSTALL_DIR/pkgm" || err "cannot install to $INSTALL_DIR"
+mv -f "$tmp/$asset" "$INSTALL_DIR/$tool" || err "cannot install to $INSTALL_DIR"
 
-printf 'pkgm-install: installed pkgm %s to %s/pkgm\n' "$want_ver" "$INSTALL_DIR" >&2
+printf '%s-install: installed %s %s to %s/%s\n' "$tool" "$tool" "$want_ver" "$INSTALL_DIR" "$tool" >&2
 
 # --- PATH hint ---------------------------------------------------------------
 case ":${PATH}:" in
@@ -115,10 +144,23 @@ case ":${PATH}:" in
   *)
     # SC2016: the literal $PATH is intentional — it is text we print for the user.
     # shellcheck disable=SC2016
-    printf '\npkgm-install: %s is not on your PATH. Add it with:\n\n    export PATH="%s:$PATH"\n\n' \
-      "$INSTALL_DIR" "$INSTALL_DIR" >&2
+    printf '\n%s-install: %s is not on your PATH. Add it with:\n\n    export PATH="%s:$PATH"\n\n' \
+      "$tool" "$INSTALL_DIR" "$INSTALL_DIR" >&2
     ;;
 esac
 
-printf '\nDone. Next:  pkgm install lz4.org\n' >&2
-printf '(installs verify against the signed registry by default)\n' >&2
+# --- per-tool next step ------------------------------------------------------
+case "$tool" in
+  pkgm)
+    printf '\nDone. Next:  pkgm install lz4.org\n' >&2
+    printf '(installs verify against the signed registry by default)\n' >&2
+    ;;
+  pkgx)
+    printf '\nDone. Next:  pkgx node@22 --version\n' >&2
+    printf '(runs packages on the fly; verifies against the signed registry by default)\n' >&2
+    ;;
+  mirror)
+    printf '\nDone. Next:  mirror agwa.name/git-crypt --dest ./m\n' >&2
+    printf '(mirrors pkgx bottles for local/offline serving)\n' >&2
+    ;;
+esac

@@ -1,33 +1,68 @@
 <#
 .SYNOPSIS
-  pkgm installer for Windows — the pure-Go pkgx package manager.
+  go-pkgx installer for Windows — the pure-Go pkgx family (pkgm, pkgx, mirror).
 
 .DESCRIPTION
   Run:
 
-      irm https://go-pkgx.github.io/install.ps1 | iex
+      irm https://go-pkgx.github.io/install.ps1 | iex                 # pkgm (default)
+      $env:PKGX_TOOL='pkgx'; irm https://go-pkgx.github.io/install.ps1 | iex
 
-  Downloads the static pkgm.exe for your architecture from a GitHub release,
-  verifies it against the release SHA256SUMS, installs it to
-  $env:LOCALAPPDATA\Programs\go-pkgx, and adds that directory to the user PATH.
-  Idempotent: re-running is the updater — it resolves the target version and
-  skips the download if that version is already installed.
+  Or, if the script is saved to disk:
 
-  Env:
-    PKGM_VERSION   install a specific version (e.g. v0.1.0 or 0.1.0);
-                   default: the latest release
-    PKGM_FORCE     set to 1 to re-download/reinstall even if already current
+      .\install.ps1 pkgx
+
+  Selects one of {pkgm, pkgx, mirror}, downloads its static <tool>.exe for your
+  architecture from a GitHub release, verifies it against the release
+  SHA256SUMS, installs it to $env:LOCALAPPDATA\Programs\go-pkgx, and adds that
+  directory to the user PATH. Idempotent: re-running is the updater — it
+  resolves the target version and skips the download if that version is already
+  installed.
+
+  Tool selection (default: pkgm, so the bare one-liner is unchanged):
+    .\install.ps1 <tool>   positional argument (pkgm | pkgx | mirror)
+    $env:PKGX_TOOL=<tool>  environment variable (or $env:TOOL=<tool>)
+
+  Env knobs (per-tool prefix PKGM_*, PKGX_*, MIRROR_*; a tool-agnostic TOOL_*
+  is honoured as a fallback):
+    <TOOL>_INSTALL / TOOL_INSTALL   install directory (default:
+                                    $env:LOCALAPPDATA\Programs\go-pkgx)
+    <TOOL>_VERSION / TOOL_VERSION   install a specific version (e.g. v0.1.0 or
+                                    0.1.0); default: the latest release
+    <TOOL>_FORCE   / TOOL_FORCE     set to 1 to re-download/reinstall even if
+                                    already current
+  (PKGM_VERSION / PKGM_FORCE keep working for the default tool.)
 
   BSD-3-Clause (c) the go-pkgx authors.
 #>
+param([string]$Tool)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$repo = 'go-pkgx/pkgm'
+# --- select the tool ---------------------------------------------------------
+if (-not $Tool) {
+  if ($env:PKGX_TOOL)  { $Tool = $env:PKGX_TOOL }
+  elseif ($env:TOOL)   { $Tool = $env:TOOL }
+  else                 { $Tool = 'pkgm' }
+}
+if ($Tool -notin @('pkgm', 'pkgx', 'mirror')) {
+  Write-Error "go-pkgx-install: unknown tool '$Tool' (choose one of: pkgm, pkgx, mirror)"
+  exit 1
+}
+$toolUpper = $Tool.ToUpper()
+$repo = "go-pkgx/$Tool"
 
 function Fail([string]$msg) {
-  Write-Error "pkgm-install: $msg"
+  Write-Error "${Tool}-install: $msg"
   exit 1
+}
+
+# Resolve a per-tool env knob: <TOOL_UPPER>_<SUFFIX> first (so PKGM_VERSION,
+# PKGX_FORCE, MIRROR_INSTALL keep working), then a tool-agnostic TOOL_<SUFFIX>.
+function Get-ToolEnv([string]$suffix) {
+  $v = [Environment]::GetEnvironmentVariable("${toolUpper}_$suffix")
+  if (-not $v) { $v = [Environment]::GetEnvironmentVariable("TOOL_$suffix") }
+  return $v
 }
 
 # --- detect architecture -----------------------------------------------------
@@ -38,50 +73,52 @@ switch ($rawArch) {
   default { Fail "unsupported architecture '$rawArch' (supported: AMD64, ARM64)" }
 }
 
-$asset = "pkgm-windows-$arch.exe"
-$installDir = Join-Path $env:LOCALAPPDATA 'Programs\go-pkgx'
-$dest = Join-Path $installDir 'pkgm.exe'
+$asset = "$Tool-windows-$arch.exe"
+$installDir = Get-ToolEnv 'INSTALL'
+if (-not $installDir) { $installDir = Join-Path $env:LOCALAPPDATA 'Programs\go-pkgx' }
+$dest = Join-Path $installDir "$Tool.exe"
 
 # --- resolve the target version ----------------------------------------------
-if ($env:PKGM_VERSION) {
-  $tag = $env:PKGM_VERSION
+$wantVersion = Get-ToolEnv 'VERSION'
+if ($wantVersion) {
+  $tag = $wantVersion
   if ($tag -notmatch '^v') { $tag = "v$tag" }  # normalise to vX.Y.Z
 } else {
   try {
     $tag = (Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -UseBasicParsing).tag_name
   } catch {
-    Fail "could not resolve the latest pkgm version ($($_.Exception.Message))"
+    Fail "could not resolve the latest $Tool version ($($_.Exception.Message))"
   }
 }
-if (-not $tag) { Fail 'could not resolve the target pkgm version' }
+if (-not $tag) { Fail "could not resolve the target $Tool version" }
 $wantVer = $tag.TrimStart('v')
 $base = "https://github.com/$repo/releases/download/$tag"
 
 # --- skip if already at the target version (unless forced) -------------------
-if ($env:PKGM_FORCE -ne '1' -and (Test-Path -LiteralPath $dest)) {
+if ((Get-ToolEnv 'FORCE') -ne '1' -and (Test-Path -LiteralPath $dest)) {
   $cur = $null
   try { $cur = (& $dest --version 2>$null | Select-Object -First 1).Split(' ')[-1] } catch { $cur = $null }
   if ($cur -eq $wantVer) {
-    Write-Host "pkgm-install: pkgm $wantVer already installed at $dest (set PKGM_FORCE=1 to reinstall)"
+    Write-Host "${Tool}-install: $Tool $wantVer already installed at $dest (set ${toolUpper}_FORCE=1 to reinstall)"
     return
   }
-  if ($cur) { Write-Host "pkgm-install: updating pkgm $cur -> $wantVer" }
+  if ($cur) { Write-Host "${Tool}-install: updating $Tool $cur -> $wantVer" }
 }
 
-$tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("pkgm-install-" + [System.Guid]::NewGuid().ToString('N'))
+$tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("$Tool-install-" + [System.Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $tmp -Force | Out-Null
 try {
   $binTmp = Join-Path $tmp $asset
   $sumsTmp = Join-Path $tmp 'SHA256SUMS'
 
-  Write-Host "pkgm-install: downloading $asset $tag"
+  Write-Host "${Tool}-install: downloading $asset $tag"
   try {
     Invoke-WebRequest -Uri "$base/$asset" -OutFile $binTmp -UseBasicParsing
   } catch {
     Fail "download failed: $base/$asset ($($_.Exception.Message))"
   }
 
-  Write-Host 'pkgm-install: verifying checksum'
+  Write-Host "${Tool}-install: verifying checksum"
   try {
     Invoke-WebRequest -Uri "$base/SHA256SUMS" -OutFile $sumsTmp -UseBasicParsing
   } catch {
@@ -90,7 +127,7 @@ try {
 
   $want = $null
   foreach ($line in Get-Content -LiteralPath $sumsTmp) {
-    # SHA256SUMS lines look like: <hex>  pkgm-windows-amd64.exe
+    # SHA256SUMS lines look like: <hex>  <tool>-windows-amd64.exe
     $parts = $line -split '\s+', 2
     if ($parts.Count -eq 2 -and $parts[1].Trim() -eq $asset) {
       $want = $parts[0].Trim().ToLower()
@@ -107,7 +144,7 @@ try {
   # --- install ---------------------------------------------------------------
   New-Item -ItemType Directory -Path $installDir -Force | Out-Null
   Move-Item -LiteralPath $binTmp -Destination $dest -Force
-  Write-Host "pkgm-install: installed pkgm $wantVer to $dest"
+  Write-Host "${Tool}-install: installed $Tool $wantVer to $dest"
 
   # --- add to user PATH ------------------------------------------------------
   $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -117,12 +154,24 @@ try {
     $newPath = if ($userPath.Length -gt 0) { "$userPath;$installDir" } else { $installDir }
     [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
     $env:Path = "$env:Path;$installDir"
-    Write-Host "pkgm-install: added $installDir to your user PATH (restart your shell to pick it up)"
+    Write-Host "${Tool}-install: added $installDir to your user PATH (restart your shell to pick it up)"
   }
 
   Write-Host ''
-  Write-Host 'Done. Next:  pkgm install lz4.org'
-  Write-Host '(installs verify against the signed registry by default)'
+  switch ($Tool) {
+    'pkgm' {
+      Write-Host 'Done. Next:  pkgm install lz4.org'
+      Write-Host '(installs verify against the signed registry by default)'
+    }
+    'pkgx' {
+      Write-Host 'Done. Next:  pkgx node@22 --version'
+      Write-Host '(runs packages on the fly; verifies against the signed registry by default)'
+    }
+    'mirror' {
+      Write-Host 'Done. Next:  mirror agwa.name/git-crypt --dest ./m'
+      Write-Host '(mirrors pkgx bottles for local/offline serving)'
+    }
+  }
 } finally {
   Remove-Item -Recurse -Force -LiteralPath $tmp -ErrorAction SilentlyContinue
 }
