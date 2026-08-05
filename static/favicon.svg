@@ -1,4 +1,4 @@
-<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="go-pkgm">
+<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="go-pkgx">
   <defs><linearGradient id="pkgmgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs>
   <rect width="256" height="256" rx="56" fill="url(#pkgmgrad)"/>
   <g fill="none" stroke="#FFFFFF" stroke-width="15" stroke-linejoin="round" stroke-linecap="round">
