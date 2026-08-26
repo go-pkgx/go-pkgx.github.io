@@ -7,6 +7,12 @@ name: Deploy Hugo site to Pages
 on:
   push:
     branches: [main]
+  # Build on every pull request too, so a change to the layout, the content or
+  # the Hugo version has to prove the site still builds before it lands.
+  # Without this the workflow ran only on main, which meant a dependency bump
+  # arrived with no signal at all -- its checks read "no checks", which is not
+  # the same thing as green and must not be merged as if it were.
+  pull_request:
   workflow_dispatch:
 
 # Allow only one concurrent deployment, skipping runs queued between
@@ -65,6 +71,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    # Only main publishes. A pull request stops after build above: it has built
+    # the site, which is the whole point of the gate, and it has no business
+    # replacing what is served.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: build
     steps:
       - name: Deploy to GitHub Pages
