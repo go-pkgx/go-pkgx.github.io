@@ -142,11 +142,11 @@
         install the same bytes, and a bad release does not reach everyone who
         happens to install that hour.</p>
       <p class="install-os">Linux / macOS</p>
-      <pre class="snippet"><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.1
-curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.1.2   # or mirror v0.1.2</code></pre>
+      <pre class="snippet"><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.2
+curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.1.3   # or mirror v0.1.3</code></pre>
       <p class="install-os">Windows (PowerShell)</p>
-      <pre class="snippet"><code>$env:PKGM_VERSION='v0.1.1'; irm https://go-pkgx.github.io/install.ps1 | iex
-$env:PKGX_TOOL='pkgx'; $env:PKGX_VERSION='v0.1.2'; irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
+      <pre class="snippet"><code>$env:PKGM_VERSION='v0.1.2'; irm https://go-pkgx.github.io/install.ps1 | iex
+$env:PKGX_TOOL='pkgx'; $env:PKGX_VERSION='v0.1.3'; irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
       <p class="install-note">To track releases instead, say so — write
         <code>latest</code> where the version goes
         (<code>sh -s -- pkgm latest</code>, or <code>PKGM_VERSION=latest</code>), which
