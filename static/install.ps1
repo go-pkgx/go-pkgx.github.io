@@ -5,14 +5,14 @@
 .DESCRIPTION
   Run:
 
-      $env:PKGM_VERSION='v0.1.1'; irm https://go-pkgx.github.io/install.ps1 | iex
+      $env:PKGM_VERSION='v0.1.2'; irm https://go-pkgx.github.io/install.ps1 | iex
       irm https://go-pkgx.github.io/install.ps1 | iex                 # pkgm, latest
       $env:PKGX_TOOL='pkgx'; irm https://go-pkgx.github.io/install.ps1 | iex
 
   A piped script takes no arguments, so on Windows the version is pinned with
   the environment variable above. Saved to disk, both are positional:
 
-      .\install.ps1 pkgx v0.1.2
+      .\install.ps1 pkgx v0.1.3
       .\install.ps1 pkgx latest
 
   Selects one of {pkgm, pkgx, mirror}, downloads its static <tool>.exe for your
@@ -96,7 +96,7 @@ if ($wantVersion -and $wantVersion -ne 'latest') {
   # would 404 on the download, three steps from here, and read as a network
   # problem instead of a typo.
   if ($wantVersion -notmatch '^v?[0-9]') {
-    Fail "'$wantVersion' is not a version (use a release like v0.1.1, or 'latest')"
+    Fail "'$wantVersion' is not a version (use a release like v0.1.2, or 'latest')"
   }
   $tag = $wantVersion
   if ($tag -notmatch '^v') { $tag = "v$tag" }  # normalise to vX.Y.Z

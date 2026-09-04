@@ -1,7 +1,7 @@
 #!/bin/sh
 # go-pkgx installer — the pure-Go pkgx family (pkgm, pkgx, mirror).
 #
-#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.1
+#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.2
 #   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm latest
 #   curl -fsSL https://go-pkgx.github.io/install.sh | sh            # pkgm, latest
 #   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx # another tool
@@ -17,7 +17,7 @@
 #   PKGX_TOOL=<tool>  environment variable (or TOOL=<tool>)
 #
 # Version selection (second positional argument, or the env knob below):
-#   sh -s -- <tool> v0.1.1   a NAMED release — what the docs pin, so a line
+#   sh -s -- <tool> v0.1.2   a NAMED release — what the docs pin, so a line
 #                            copied today and the same line copied in six
 #                            months install the same bytes, and a bad release
 #                            does not reach everyone who installs that hour
@@ -124,7 +124,7 @@ case "$want_version" in
     # Refuse rather than prefix a "v" onto whatever this is: "vmain" or
     # "vstable" would 404 on the download, three steps from here, and read as
     # a network problem instead of a typo.
-    err "'$want_version' is not a version (use a release like v0.1.1, or 'latest')"
+    err "'$want_version' is not a version (use a release like v0.1.2, or 'latest')"
     ;;
 esac
 want_ver=${tag#v}
