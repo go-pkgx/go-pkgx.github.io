@@ -135,21 +135,25 @@
 
     <section class="install">
       <h2>Install</h2>
-      <p>One line — downloads the static binary for your os/arch from the latest
-        release, verifies it against the release <code>SHA256SUMS</code>, and puts
-        it on your <code>PATH</code>. Installs <code>pkgm</code> by default; pass a
-        tool name to install <code>pkgx</code> or <code>mirror</code> instead.</p>
+      <p>One line — downloads the static binary for your os/arch from a named
+        GitHub release, verifies it against the release <code>SHA256SUMS</code>, and
+        puts it on your <code>PATH</code>. The lines below name a version on
+        purpose: a line copied today and the same line copied in six months
+        install the same bytes, and a bad release does not reach everyone who
+        happens to install that hour.</p>
       <p class="install-os">Linux / macOS</p>
-      <pre class="snippet"><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh            # pkgm (default)
-curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx # or pkgx / mirror</code></pre>
+      <pre class="snippet"><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.1
+curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.1.2   # or mirror v0.1.2</code></pre>
       <p class="install-os">Windows (PowerShell)</p>
-      <pre class="snippet"><code>irm https://go-pkgx.github.io/install.ps1 | iex                              # pkgm
-$env:PKGX_TOOL='pkgx'; irm https://go-pkgx.github.io/install.ps1 | iex        # or pkgx / mirror</code></pre>
-      <p class="install-note">Re-running is the updater — it skips the download when
-        the target version is already installed. Pin a version with
-        <code>PKGM_VERSION=v0.1.0</code> (or <code>PKGX_VERSION</code> /
-        <code>MIRROR_VERSION</code>), force a reinstall with <code>PKGM_FORCE=1</code>.
-        Go users: <code>go install github.com/go-pkgx/pkgm@latest</code>. Then
+      <pre class="snippet"><code>$env:PKGM_VERSION='v0.1.1'; irm https://go-pkgx.github.io/install.ps1 | iex
+$env:PKGX_TOOL='pkgx'; $env:PKGX_VERSION='v0.1.2'; irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
+      <p class="install-note">To track releases instead, say so — write
+        <code>latest</code> where the version goes
+        (<code>sh -s -- pkgm latest</code>, or <code>PKGM_VERSION=latest</code>), which
+        is also what a bare <code>| sh</code> has always done. Re-running is the
+        updater: it skips the download when the target version is already installed;
+        <code>PKGM_FORCE=1</code> reinstalls anyway. Go users:
+        <code>go install github.com/go-pkgx/pkgm@latest</code>. Then
         <code>pkgm install lz4.org</code> — installs verify against the signed
         registry by default.</p>
     </section>

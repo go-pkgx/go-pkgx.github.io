@@ -1,8 +1,10 @@
 #!/bin/sh
 # go-pkgx installer — the pure-Go pkgx family (pkgm, pkgx, mirror).
 #
-#   curl -fsSL https://go-pkgx.github.io/install.sh | sh            # pkgm (default)
-#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx # a specific tool
+#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.1
+#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm latest
+#   curl -fsSL https://go-pkgx.github.io/install.sh | sh            # pkgm, latest
+#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx # another tool
 #
 # Selects one of {pkgm, pkgx, mirror}, downloads its static, dependency-free
 # binary for your os/arch from a GitHub release, verifies it against the release
@@ -14,11 +16,24 @@
 #   sh -s -- <tool>   positional argument (pkgm | pkgx | mirror)
 #   PKGX_TOOL=<tool>  environment variable (or TOOL=<tool>)
 #
+# Version selection (second positional argument, or the env knob below):
+#   sh -s -- <tool> v0.1.1   a NAMED release — what the docs pin, so a line
+#                            copied today and the same line copied in six
+#                            months install the same bytes, and a bad release
+#                            does not reach everyone who installs that hour
+#   sh -s -- <tool> latest   the newest release, said out loud
+#   sh -s -- <tool>          the newest release (unchanged; what a bare
+#                            `| sh` has always done, and existing pipelines
+#                            keep doing)
+#
 # Env knobs (per-tool prefix, e.g. PKGM_*, PKGX_*, MIRROR_*; a tool-agnostic
 # TOOL_* is honoured as a fallback):
 #   <TOOL>_INSTALL / TOOL_INSTALL   install directory (default: $HOME/.local/bin)
 #   <TOOL>_VERSION / TOOL_VERSION   install a specific version (e.g. v0.1.0 or
-#                                   0.1.0); default: the latest release
+#                                   0.1.0), or `latest`; default: the latest
+#                                   release. The positional argument wins over
+#                                   this, so a pinned one-liner cannot be
+#                                   silently redirected by an exported variable.
 #   <TOOL>_FORCE   / TOOL_FORCE     set to 1 to re-download/reinstall even if
 #                                   already current
 # (PKGM_INSTALL / PKGM_VERSION / PKGM_FORCE keep working for the default tool.)
@@ -90,14 +105,28 @@ else
 fi
 
 # --- resolve the target version ----------------------------------------------
-want_version=$(tool_env VERSION)
-if [ -n "$want_version" ]; then
-  tag=$want_version
-  case "$tag" in v*) ;; *) tag="v$tag" ;; esac  # normalise to vX.Y.Z
-else
-  tag=$(latest_tag) || err "could not resolve the latest ${tool} version"
-  [ -n "$tag" ] || err "could not resolve the latest ${tool} version"
-fi
+# The second positional argument beats the env knob, which beats "latest". A
+# pinned one-liner must mean what it says: if an exported <TOOL>_VERSION could
+# override it, the line a reader copied and the version they got would differ,
+# which is the whole failure this pin exists to prevent.
+want_version="${2:-}"
+[ -n "$want_version" ] || want_version=$(tool_env VERSION)
+case "$want_version" in
+  ""|latest|LATEST)
+    tag=$(latest_tag) || err "could not resolve the latest ${tool} version"
+    [ -n "$tag" ] || err "could not resolve the latest ${tool} version"
+    ;;
+  v[0-9]*|[0-9]*)
+    tag=$want_version
+    case "$tag" in v*) ;; *) tag="v$tag" ;; esac  # normalise to vX.Y.Z
+    ;;
+  *)
+    # Refuse rather than prefix a "v" onto whatever this is: "vmain" or
+    # "vstable" would 404 on the download, three steps from here, and read as
+    # a network problem instead of a typo.
+    err "'$want_version' is not a version (use a release like v0.1.1, or 'latest')"
+    ;;
+esac
 want_ver=${tag#v}
 BASE="https://github.com/${REPO}/releases/download/${tag}"
 url="${BASE}/${asset}"

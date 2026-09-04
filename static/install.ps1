@@ -5,12 +5,15 @@
 .DESCRIPTION
   Run:
 
-      irm https://go-pkgx.github.io/install.ps1 | iex                 # pkgm (default)
+      $env:PKGM_VERSION='v0.1.1'; irm https://go-pkgx.github.io/install.ps1 | iex
+      irm https://go-pkgx.github.io/install.ps1 | iex                 # pkgm, latest
       $env:PKGX_TOOL='pkgx'; irm https://go-pkgx.github.io/install.ps1 | iex
 
-  Or, if the script is saved to disk:
+  A piped script takes no arguments, so on Windows the version is pinned with
+  the environment variable above. Saved to disk, both are positional:
 
-      .\install.ps1 pkgx
+      .\install.ps1 pkgx v0.1.2
+      .\install.ps1 pkgx latest
 
   Selects one of {pkgm, pkgx, mirror}, downloads its static <tool>.exe for your
   architecture from a GitHub release, verifies it against the release
@@ -28,14 +31,17 @@
     <TOOL>_INSTALL / TOOL_INSTALL   install directory (default:
                                     $env:LOCALAPPDATA\Programs\go-pkgx)
     <TOOL>_VERSION / TOOL_VERSION   install a specific version (e.g. v0.1.0 or
-                                    0.1.0); default: the latest release
+                                    0.1.0), or 'latest'; default: the latest
+                                    release. The -Version argument wins over
+                                    this, so a pinned command line cannot be
+                                    silently redirected by an exported variable.
     <TOOL>_FORCE   / TOOL_FORCE     set to 1 to re-download/reinstall even if
                                     already current
   (PKGM_VERSION / PKGM_FORCE keep working for the default tool.)
 
   BSD-3-Clause (c) the go-pkgx authors.
 #>
-param([string]$Tool)
+param([string]$Tool, [string]$Version)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -79,8 +85,19 @@ if (-not $installDir) { $installDir = Join-Path $env:LOCALAPPDATA 'Programs\go-p
 $dest = Join-Path $installDir "$Tool.exe"
 
 # --- resolve the target version ----------------------------------------------
-$wantVersion = Get-ToolEnv 'VERSION'
-if ($wantVersion) {
+# The -Version argument beats the env knob, which beats "latest". A pinned
+# command must mean what it says: if an exported <TOOL>_VERSION could override
+# it, the line a reader copied and the version they got would differ, which is
+# the whole failure this pin exists to prevent.
+$wantVersion = $Version
+if (-not $wantVersion) { $wantVersion = Get-ToolEnv 'VERSION' }
+if ($wantVersion -and $wantVersion -ne 'latest') {
+  # Refuse rather than prefix a "v" onto whatever this is: "vmain" or "vstable"
+  # would 404 on the download, three steps from here, and read as a network
+  # problem instead of a typo.
+  if ($wantVersion -notmatch '^v?[0-9]') {
+    Fail "'$wantVersion' is not a version (use a release like v0.1.1, or 'latest')"
+  }
   $tag = $wantVersion
   if ($tag -notmatch '^v') { $tag = "v$tag" }  # normalise to vX.Y.Z
 } else {
