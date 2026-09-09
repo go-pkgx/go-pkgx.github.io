@@ -1,7 +1,7 @@
 #!/bin/sh
 # go-pkgx installer — the pure-Go pkgx family (pkgm, pkgx, mirror).
 #
-#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.3
+#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.4
 #   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm latest
 #   curl -fsSL https://go-pkgx.github.io/install.sh | sh            # pkgm, latest
 #   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx # another tool

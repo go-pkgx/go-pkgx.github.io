@@ -142,11 +142,11 @@
         install the same bytes, and a bad release does not reach everyone who
         happens to install that hour.</p>
       <p class="install-os">Linux / macOS</p>
-      <pre class="snippet"><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.3
-curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.1.4   # or mirror v0.1.4</code></pre>
+      <pre class="snippet"><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.4
+curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.1.5   # or mirror v0.1.4</code></pre>
       <p class="install-os">Windows (PowerShell)</p>
-      <pre class="snippet"><code>$env:PKGM_VERSION='v0.1.3'; irm https://go-pkgx.github.io/install.ps1 | iex
-$env:PKGX_TOOL='pkgx'; $env:PKGX_VERSION='v0.1.4'; irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
+      <pre class="snippet"><code>$env:PKGM_VERSION='v0.1.4'; irm https://go-pkgx.github.io/install.ps1 | iex
+$env:PKGX_TOOL='pkgx'; $env:PKGX_VERSION='v0.1.5'; irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
       <p class="install-note">To track releases instead, say so — write
         <code>latest</code> where the version goes
         (<code>sh -s -- pkgm latest</code>, or <code>PKGM_VERSION=latest</code>), which
@@ -204,6 +204,22 @@ $ docker run --rm pkgx-scratch +sqlite.org -- sqlite3 --version   # bring pkgs i
         an unsigned or badly-signed bottle is refused. Builds are isolated in a pinned
         <code>debian</code> container today (Phase A), with an experimental FROM-scratch
         pkgx-glibc toolchain proven feasible (Phase B).</p>
+      <p>Those attestations describe what comes <em>out</em>. The provenance now also
+        records what went <strong>in</strong>: the source archive's SHA-256 (or a git
+        checkout's commit) as a SLSA <code>resolvedDependency</code>, naming the
+        candidate URL that actually answered — and where a recipe declares a checksum
+        URL, a mismatch <strong>fails the build</strong> rather than falling through to
+        the next mirror.</p>
+      <p>The catalog also reaches <strong>below where the pantry stops</strong>. Six
+        projects here exist nowhere upstream — the HPC and GPU floor an MPI needs:
+        <code>openucx.org</code> built <code>--with-verbs</code> (so the InfiniBand
+        transports are there, not TCP alone), <code>rdma-core</code> underneath it,
+        <strong>ROCr</strong> built from NCSA source, NVIDIA's <code>cuda-cudart</code>
+        verified against the vendor's own manifest, a microVM
+        <code>kernel.org/linux</code> carrying an RDMA stack, VFIO passthrough and
+        GPUDirect, and <code>crun</code>. The two GPU rows differ in kind and the
+        recipes say so: ROCm is source we compile, CUDA is an archive we fetch under a
+        licence that names which files may travel.</p>
       <pre class="snippet"><code># install from the signed OCI registry, verifying against the pinned key
 $ PKGX_DIST=oci://ghcr.io/go-pkgx/packages PKGX_VERIFY=1 pkgm install lz4.org
 
