@@ -109,6 +109,7 @@
       <span class="pill">zero runtime deps</span>
       <span class="pill">runs FROM scratch</span>
       <span class="pill">shared backend</span>
+      <span class="pill">module system, no Lmod</span>
       <span class="pill">BSD-3-Clause</span>
     </div>
     <div class="cta">
@@ -181,6 +182,39 @@ $ docker run --rm pkgx-scratch +sqlite.org -- sqlite3 --version   # bring pkgs i
         </div>
       </article>
       {{ end }}
+    </section>
+
+    <section class="modules">
+      <h2>A module system, without Lmod</h2>
+      <p>A module system does two things: it resolves what a package needs, and it edits
+        your shell. <code>pkgx +a +b</code> already did the first. <strong><code>pkge</code></strong>
+        does the second — a front-end shaped like Lmod's, over pkgx's own resolution, with
+        <strong>no Lua interpreter and no modulefile tree</strong>. It ships inside the
+        <code>pkgx</code> binary; there is nothing else to install.</p>
+      <pre class="snippet"><code>$ eval "$(pkgx env init)"          # in a profile
+$ pkge load stedolan.github.io/jq
+$ command -v jq
+~/.pkgx/stedolan.github.io/jq/v1.8.2/bin/jq
+$ pkge unload stedolan.github.io/jq
+$ command -v jq
+/usr/bin/jq                        # back, exactly as it was</code></pre>
+      <p>Unloading is <strong>exact</strong> because loading never edits incrementally: it
+        restores the environment it first saw and recomposes from the whole spec set, so
+        <code>unload b</code> after <code>load a b c</code> leaves precisely what
+        <code>load a c</code> would have — whatever order things happened in.
+        <code>pkge save</code> / <code>restore</code> name a set; <code>pkge purge</code>
+        drops everything.</p>
+      <p>On a cluster that already runs Lmod, nothing needs to change: publish modulefiles
+        and let the site's own Lmod load them, so conflicts, hierarchies and
+        <code>spider</code> keep working.</p>
+      <pre class="snippet"><code>$ pkgx --modulefile +openmpi.org@5 &gt; $MODULEPATH_DIR/openmpi/5.0.8.lua
+$ pkgx --json +openmpi.org@5            # …or the same environment as data</code></pre>
+      <p>Where there is no Lmod — a container, a laptop, a cluster built on this toolchain —
+        <code>pkgx env init --module</code> also defines <code>module</code> and
+        <code>ml</code>. And where there IS one it <strong>refuses</strong> to define them:
+        two implementations answering one command is how a support ticket becomes
+        unanswerable, and a site's own modulefiles are not ours to interpret.</p>
+      <p class="registry-links"><a href="https://go-pkgx.github.io/docs/environments/">Environments and HPC →</a></p>
     </section>
 
     <section class="registry">
