@@ -67,7 +67,7 @@ curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.1.5</code></p
 <pre><code>$env:PKGM_VERSION='v0.1.4'
 irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
       </div>
-      <div class="card">
+      <div class="card wide">
         <div class="ico">🔁</div><h3>Tracking releases, and updating</h3>
         <p>Write <code>latest</code> where the version goes — which is also what a bare <code>| sh</code> has always done. Re-running <i>is</i> the updater: it skips the download when the target version is already installed, and <code>PKGM_FORCE=1</code> reinstalls anyway. Go users: <code>go install github.com/go-pkgx/pkgm@latest</code>.</p>
       </div>
