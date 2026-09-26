@@ -3,301 +3,142 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ .Site.Title }} — the pkgx world in pure Go, runs on FROM scratch</title>
-<meta name="description" content="go-pkgx — the pkgx world in pure Go (CGO=0): a runtime (pkgx), an installer (pkgm), and their shared bottle backend. Single static binaries that run and install packages on a FROM scratch image with no runtime dependencies of their own.">
-<style>
-  :root {
-    --bg: #ffffff; --fg: #1b1f24; --muted: #57606a; --card: #f6f8fa;
-    --border: #d8dbe6; --accent: #B45309; --accent-2: #F59E0B; --accent-fg: #ffffff;
-    --ready: #1a7f37; --active: #7c3aed; --planned: #9a6700;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) {
-      --bg: #0b0d12; --fg: #e6e8f0; --muted: #9aa0b4; --card: #141826;
-      --border: #262c40; --accent: #F59E0B; --accent-2: #FBBF24; --accent-fg: #0b0d12;
-      --ready: #3fb950; --active: #a78bfa; --planned: #d29922;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0b0d12; --fg: #e6e8f0; --muted: #9aa0b4; --card: #141826;
-    --border: #262c40; --accent: #F59E0B; --accent-2: #FBBF24; --accent-fg: #0b0d12;
-    --ready: #3fb950; --active: #a78bfa; --planned: #d29922;
-  }
-  .theme-toggle {
-    position: fixed; top: 14px; right: 14px; z-index: 10;
-    font: inherit; font-size: .8rem; cursor: pointer; padding: 6px 12px;
-    color: var(--fg); background: var(--card); border: 1px solid var(--border); border-radius: 999px;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--fg);
-    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  }
-  .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
-  header {
-    padding: 84px 0 40px; text-align: center;
-    background:
-      radial-gradient(900px 320px at 50% -40px, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 70%);
-  }
-  .logo { display: block; margin: 0 auto 18px; border-radius: 22px; filter: drop-shadow(0 8px 28px color-mix(in srgb, var(--accent) 35%, transparent)); }
-  h1 { font-size: 2.7rem; margin: 0 0 .3em; letter-spacing: -.02em; }
-  .tagline { font-size: 1.2rem; color: var(--muted); margin: 0 auto; max-width: 660px; }
-  .pills { margin: 22px 0 0; }
-  .pill {
-    display: inline-block; margin: 4px; padding: 3px 10px; font-size: .82rem;
-    color: var(--muted); background: var(--card); border: 1px solid var(--border); border-radius: 999px;
-  }
-  .cta { margin: 30px 0 0; }
-  .badges { margin: 18px 0 0; }
-  .badges a { margin: 0 3px; text-decoration: none; }
-  .badges img { vertical-align: middle; }
-  .btn {
-    display: inline-block; padding: 10px 18px; margin: 4px; border-radius: 8px; text-decoration: none;
-    font-weight: 600; border: 1px solid var(--border);
-  }
-  .btn.primary { background: linear-gradient(135deg, var(--accent-2), var(--accent)); color: var(--accent-fg); border-color: var(--accent); }
-  .btn.ghost { color: var(--fg); background: transparent; }
-  .lead { color: var(--fg); max-width: 760px; margin: 8px auto 0; text-align: center; }
-  .lead code { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; padding: 24px 0 8px; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
-  .card h3 { margin: 0 0 .35em; font-size: 1.2rem; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .card h3 a { color: inherit; text-decoration: none; }
-  .card h3 a:hover { text-decoration: underline; }
-  .card p { margin: 0; color: var(--fg); }
-  .card p code { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
-  .card .links { margin-top: 10px; font-size: .82rem; }
-  .card .links a { margin-right: 10px; }
-  .status { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; }
-  .status.ready { color: var(--ready); }
-  .status.active { color: var(--active); }
-  .status.planned { color: var(--planned); }
-  pre.snippet { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; overflow-x: auto; font-size: .9rem; margin: 24px auto; max-width: 760px; }
-  .replaces { color: var(--muted); text-align: center; max-width: 760px; margin: 18px auto 0; padding: 14px 18px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
-  .principles { color: var(--muted); text-align: center; padding: 10px 0 0; }
-  .install { max-width: 760px; margin: 30px auto 0; padding: 22px 24px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
-  .install h2 { margin: 0 0 .4em; font-size: 1.5rem; letter-spacing: -.01em; }
-  .install p { margin: 0 0 8px; color: var(--fg); }
-  .install code { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
-  .install .install-os { margin: 16px 0 4px; font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-  .install .snippet { margin: 0; max-width: none; }
-  .install .install-note { margin: 16px 0 0; font-size: .9rem; color: var(--muted); }
-  .registry { max-width: 760px; margin: 32px auto 0; padding: 22px 24px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
-  .registry h2 { margin: 0 0 .5em; font-size: 1.5rem; letter-spacing: -.01em; }
-  .registry p { margin: 0 0 12px; color: var(--fg); }
-  .registry code { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
-  .registry .snippet { margin: 18px 0; max-width: none; }
-  .registry-links { font-size: .82rem; color: var(--muted); margin: 4px 0 0 !important; }
-  .registry-links a { margin-right: 6px; }
-  footer { color: var(--muted); text-align: center; padding: 40px 0 56px; font-size: .9rem; }
-  a { color: var(--accent); }
-</style>
-<script>
-  (function(){var m=localStorage.getItem('theme');if(m&&m!=='system')document.documentElement.setAttribute('data-theme',m);})();
-</script>
+<title>{{ .Site.Title }} — the pkgx world in pure Go, running on FROM scratch</title>
+<meta name="description" content="go-pkgx — the pkgx world in pure Go (CGO_ENABLED=0): a runtime (pkgx), an installer (pkgm) and the bottle backend they share. Single static binaries with no libc of their own, so they run on a literally empty FROM scratch image and materialise real packages there. Plus a signed, attested bottle registry built by a CGO-free factory.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+{{ partial "styles.html" . }}
 </head>
-<body>
-  <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle light, dark or system theme"><span id="theme-label">🖥️ System</span></button>
-  <header class="wrap">
-    <img class="logo" width="88" height="88" alt="go-pkgx" src="/img/logo.svg">
-    <h1>go-pkgx</h1>
-    <p class="tagline">The pkgx world in pure Go — run and install packages on <code>FROM scratch</code>, with one static binary each and a shared backend.</p>
-    <div class="pills">
-      <span class="pill">pure Go · CGO=0</span>
-      <span class="pill">one static binary each</span>
-      <span class="pill">zero runtime deps</span>
-      <span class="pill">runs FROM scratch</span>
-      <span class="pill">shared backend</span>
-      <span class="pill">module system, no Lmod</span>
-      <span class="pill">BSD-3-Clause</span>
+<body class="lm">
+  <header class="nav"><div class="wrap">
+    <a class="brand" href="/"><img class="glyph" src="/img/logo.svg" width="32" height="32" alt="go-pkgx logo"> go-pkgx</a>
+    <nav><a href="#install">Install</a><a href="#features">Why</a><a href="#modules">Modules</a><a href="#registry">Registry</a></nav>
+    {{ partial "theme-toggle.html" . }}
+    <a class="btn btn-ghost" href="https://github.com/go-pkgx">GitHub</a>
+  </div></header>
+
+  <div class="hero"><div class="wrap">
+    <div>
+      <h1 class="head">No libc of its own,<br><span class="accent">so there is nowhere it cannot run.</span></h1>
+      <p class="sub">The pkgx world rebuilt in pure <code>CGO_ENABLED=0</code> Go: a <b>runtime</b> that runs packages on the fly, an <b>installer</b> that mirrors the reference CLI, and the <b>bottle backend</b> they share. The reference tools shell out to pkgx + deno + curl + openssl + xz — about <b>515&nbsp;MB</b> of runtime closure. These replace all of it with single <b>~9&nbsp;MB</b> static binaries that need no libc at all, so they run on a literally empty <code>FROM scratch</code> image and materialise real packages there. BSD-3-Clause.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#install">Install in one line →</a>
+        <a class="btn btn-ghost" href="https://github.com/go-pkgx">Browse the repositories</a>
+      </div>
+      {{/* ⛔ DERIVED. The sibling orgs learned this the hard way: a count typed
+           beside the data it counts was right when it was typed and had no way
+           of staying right. */}}
+      <div class="trust"><span><b>{{ len .Site.Params.repos }}</b> repositories</span><span><b>~9&nbsp;MB</b> static, no libc</span><span><b>5</b> platforms published</span></div>
     </div>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/go-pkgx/pkgx">pkgx</a>
-      <a class="btn ghost" href="https://github.com/go-pkgx/pkgm">pkgm</a>
-      <a class="btn ghost" href="https://go-pkgx.github.io/docs/">docs</a>
-      <a class="btn ghost" href="https://github.com/go-pkgx">org</a>
+    <div class="term">
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">FROM scratch — zsh</span></div>
+<pre><span class="c-com"># an image whose ONLY file is the pkgx binary</span>
+<span class="c-cmd">FROM</span> scratch
+<span class="c-cmd">COPY</span> pkgx /bin/pkgx
+<span class="c-cmd">ENV</span> PKGX_DIR=/pkgx
+<span class="c-cmd">ENTRYPOINT</span> ["/bin/pkgx"]
+
+<span class="c-com"># there is no shell in there, and no libc either</span>
+<span class="c-cmd">$ docker run</span> --rm pkgx-scratch gnu.org/wget --version
+<span class="c-out">GNU Wget 1.25.0 built on linux-gnu.</span>
+
+<span class="c-com"># bring several packages into one environment</span>
+<span class="c-cmd">$ docker run</span> --rm pkgx-scratch +sqlite.org -- sqlite3 --version
+<span class="c-out">3.53.4 2026-07-24 …</span></pre>
     </div>
-    <div class="badges">
-      <a href="https://pkg.go.dev/github.com/go-pkgx/pkgx"><img alt="pkg.go.dev" src="https://img.shields.io/badge/pkg.go.dev-pkgx-007d9c?logo=go&amp;logoColor=white"></a>
-      <img alt="Go" src="https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go&amp;logoColor=white">
-      <img alt="License" src="https://img.shields.io/badge/license-BSD--3--Clause-blue">
+  </div></div>
+
+  <div class="strip"><div class="wrap">
+    <span class="lead-line">{{ len .Site.Params.repos }} repositories — <b>one job each</b>, so the backend can be imported without bringing a CLI with it</span>
+    <div class="mods">{{ range .Site.Params.repos }}<a href="{{ .url }}">{{ .name }}</a>{{ end }}</div>
+  </div></div>
+
+  <section id="install"><div class="wrap">
+    <span class="eyebrow">Install</span>
+    <h2>One line, and it names a version on purpose.</h2>
+    <p class="lead">It downloads the static binary for your os/arch from a named GitHub release, verifies it against that release's <code>SHA256SUMS</code>, and puts it on your <code>PATH</code>. A line copied today and the same line copied in six months install the same bytes — and a bad release does not reach everyone who happens to install that hour.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="ico">🐧</div><h3>Linux / macOS</h3>
+<pre><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.4
+curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.1.5</code></pre>
+      </div>
+      <div class="card">
+        <div class="ico">🪟</div><h3>Windows (PowerShell)</h3>
+<pre><code>$env:PKGM_VERSION='v0.1.4'
+irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
+      </div>
+      <div class="card">
+        <div class="ico">🔁</div><h3>Tracking releases, and updating</h3>
+        <p>Write <code>latest</code> where the version goes — which is also what a bare <code>| sh</code> has always done. Re-running <i>is</i> the updater: it skips the download when the target version is already installed, and <code>PKGM_FORCE=1</code> reinstalls anyway. Go users: <code>go install github.com/go-pkgx/pkgm@latest</code>.</p>
+      </div>
     </div>
-  </header>
+  </div></section>
 
-  <main class="wrap">
-    <p class="lead"><strong>go-pkgx</strong> is the pkgx world rebuilt in pure <code>CGO_ENABLED=0</code> Go:
-      a <strong>runtime</strong> (<code>pkgx</code>) that runs packages on the fly, an <strong>installer</strong>
-      (<code>pkgm</code>) that mirrors the reference CLI, and the <strong>bottle</strong> backend they both
-      share. The reference tools shell out to pkgx + deno + curl + openssl + xz &mdash; ~<strong>515&nbsp;MB</strong>
-      of runtime closure. These replace all of it with single ~9&nbsp;MB static binaries that need no libc at
-      all &mdash; so they run on a literally-empty <code>FROM scratch</code> image and materialise real packages
-      there.</p>
-
-    <section class="install">
-      <h2>Install</h2>
-      <p>One line — downloads the static binary for your os/arch from a named
-        GitHub release, verifies it against the release <code>SHA256SUMS</code>, and
-        puts it on your <code>PATH</code>. The lines below name a version on
-        purpose: a line copied today and the same line copied in six months
-        install the same bytes, and a bad release does not reach everyone who
-        happens to install that hour.</p>
-      <p class="install-os">Linux / macOS</p>
-      <pre class="snippet"><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.1.4
-curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.1.5   # or mirror v0.1.4</code></pre>
-      <p class="install-os">Windows (PowerShell)</p>
-      <pre class="snippet"><code>$env:PKGM_VERSION='v0.1.4'; irm https://go-pkgx.github.io/install.ps1 | iex
-$env:PKGX_TOOL='pkgx'; $env:PKGX_VERSION='v0.1.5'; irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
-      <p class="install-note">To track releases instead, say so — write
-        <code>latest</code> where the version goes
-        (<code>sh -s -- pkgm latest</code>, or <code>PKGM_VERSION=latest</code>), which
-        is also what a bare <code>| sh</code> has always done. Re-running is the
-        updater: it skips the download when the target version is already installed;
-        <code>PKGM_FORCE=1</code> reinstalls anyway. Go users:
-        <code>go install github.com/go-pkgx/pkgm@latest</code>. Then
-        <code>pkgm install lz4.org</code> — installs verify against the signed
-        registry by default.</p>
-    </section>
-
-    <pre class="snippet"><code># a FROM scratch image whose ONLY file is the pkgx binary
-FROM scratch
-COPY pkgx /bin/pkgx
-ENV PKGX_DIR=/pkgx
-ENTRYPOINT ["/bin/pkgx"]
-
-$ docker run --rm pkgx-scratch gnu.org/wget --version
-GNU Wget 1.25.0 built on linux-gnu.
-
-$ docker run --rm pkgx-scratch +sqlite.org -- sqlite3 --version   # bring pkgs into env
-3.53.4 2026-07-24 …</code></pre>
-
-    <section class="grid">
+  <section id="features"><div class="wrap">
+    <span class="eyebrow">Why go-pkgx</span>
+    <h2>A package manager that owns its own environment.</h2>
+    <p class="lead">Every dependency a packaging tool shells out to is a dependency the packages it installs have to coexist with. Removing them is not tidiness — it is what makes an empty image a valid target.</p>
+    <div class="grid">
       {{ range .Site.Params.repos }}
-      <article class="card">
-        <h3><a href="{{ .url }}">{{ .name }}</a> <span class="status {{ .status }}">{{ .status }}</span></h3>
+      <div class="card">
+        <h3>{{ .name }} <span class="tag {{ cond (eq .status "ready") "ready" "active" }}">{{ cond (eq .status "ready") "ready" "not yet" }}</span></h3>
         <p>{{ .blurb | markdownify }}</p>
-        <div class="links">
-          <a href="{{ .url }}">repo</a>
-          <a href="https://pkg.go.dev/{{ .pkg }}">pkg.go.dev</a>
-        </div>
-      </article>
+        <p><a href="{{ .url }}">repo →</a>{{ if .pkg }} · <a href="https://pkg.go.dev/{{ .pkg }}">pkg.go.dev</a>{{ end }}</p>
+      </div>
       {{ end }}
-    </section>
+    </div>
+  </div></section>
 
-    <section class="modules">
-      <h2>A module system, without Lmod</h2>
-      <p>A module system does two things: it resolves what a package needs, and it edits
-        your shell. <code>pkgx +a +b</code> already did the first. <strong><code>pkge</code></strong>
-        does the second — a front-end shaped like Lmod's, over pkgx's own resolution, with
-        <strong>no Lua interpreter and no modulefile tree</strong>. It ships inside the
-        <code>pkgx</code> binary; there is nothing else to install.</p>
-      <pre class="snippet"><code>$ eval "$(pkgx env init)"          # in a profile
-$ pkge load stedolan.github.io/jq
-$ command -v jq
-~/.pkgx/stedolan.github.io/jq/v1.8.2/bin/jq
-$ pkge unload stedolan.github.io/jq
-$ command -v jq
-/usr/bin/jq                        # back, exactly as it was</code></pre>
-      <p>Unloading is <strong>exact</strong> because loading never edits incrementally: it
-        restores the environment it first saw and recomposes from the whole spec set, so
-        <code>unload b</code> after <code>load a b c</code> leaves precisely what
-        <code>load a c</code> would have — whatever order things happened in.
-        <code>pkge save</code> / <code>restore</code> name a set; <code>pkge purge</code>
-        drops everything.</p>
-      <p>On a cluster that already runs Lmod, nothing needs to change: publish modulefiles
-        and let the site's own Lmod load them, so conflicts, hierarchies and
-        <code>spider</code> keep working.</p>
-      <pre class="snippet"><code>$ pkgx --modulefile +openmpi.org@5 &gt; $MODULEPATH_DIR/openmpi/5.0.8.lua
-$ pkgx --json +openmpi.org@5            # …or the same environment as data</code></pre>
-      <p>Where there is no Lmod — a container, a laptop, a cluster built on this toolchain —
-        <code>pkgx env init --module</code> also defines <code>module</code> and
-        <code>ml</code>. And where there IS one it <strong>refuses</strong> to define them:
-        two implementations answering one command is how a support ticket becomes
-        unanswerable, and a site's own modulefiles are not ours to interpret.</p>
-      <p class="registry-links"><a href="https://go-pkgx.github.io/docs/environments/">Environments and HPC →</a></p>
-    </section>
+  <section id="perf" style="padding-top:10px"><div class="wrap">
+    <div class="stats">
+      <div><div class="n">{{ len .Site.Params.repos }}</div><div class="l">repositories, one job each</div></div>
+      <div><div class="n">~9&nbsp;MB</div><div class="l">static binary, against ~515&nbsp;MB of reference closure</div></div>
+      <div><div class="n">1818</div><div class="l">of 1896 pantry projects publish a linux bottle</div></div>
+      <div><div class="n">0</div><div class="l">runtime dependencies — no libc, no deno, no curl</div></div>
+    </div>
+  </div></section>
 
-    <section class="registry">
-      <h2>A signed, attested package registry</h2>
-      <p>The org also runs its own bottle registry —
-        <code>ghcr.io/go-pkgx/packages</code>. A pure-Go factory builds
-        <a href="https://github.com/pkgxdev/pantry">pkgx pantry</a> recipes with
-        <a href="https://github.com/go-pkgx/bk">bk</a> (a CGO-free re-implementation of
-        brewkit) for <strong>every platform</strong> — linux (x86-64 &amp; aarch64),
-        darwin (x86-64 &amp; aarch64) and windows (x86-64) — publishing through
-        <strong>two channels</strong>: the signed <code>ghcr.io/go-pkgx/packages</code>
-        OCI registry <strong>and</strong> a GitHub Pages pkgx-dist mirror at
-        <a href="https://go-pkgx.github.io/packages"><code>go-pkgx.github.io/packages</code></a>.
-        Auth uses the workflow's <strong>native <code>GITHUB_TOKEN</code></strong>
-        — no long-lived PAT — and every <code>(project, version, platform)</code> already
-        in ghcr is skipped, so the catalog grows progressively.</p>
-      <p>Each bottle carries, as OCI referrers, a <strong>CycloneDX SBOM</strong>, an
-        in-toto <strong>SLSA provenance</strong> statement, and a
-        <strong>cosign-style + minisign signature</strong> that verifies against a pinned
-        public key. On install, <code>PKGX_VERIFY=1</code> is <strong>fail-closed</strong>:
-        an unsigned or badly-signed bottle is refused. Builds are isolated in a pinned
-        <code>debian</code> container today (Phase A), with an experimental FROM-scratch
-        pkgx-glibc toolchain proven feasible (Phase B).</p>
-      <p>Those attestations describe what comes <em>out</em>. The provenance now also
-        records what went <strong>in</strong>: the source archive's SHA-256 (or a git
-        checkout's commit) as a SLSA <code>resolvedDependency</code>, naming the
-        candidate URL that actually answered — and where a recipe declares a checksum
-        URL, a mismatch <strong>fails the build</strong> rather than falling through to
-        the next mirror.</p>
-      <p>The catalog also reaches <strong>below where the pantry stops</strong>. Six
-        projects here exist nowhere upstream — the HPC and GPU floor an MPI needs:
-        <code>openucx.org</code> built <code>--with-verbs</code> (so the InfiniBand
-        transports are there, not TCP alone), <code>rdma-core</code> underneath it,
-        <strong>ROCr</strong> built from NCSA source, NVIDIA's <code>cuda-cudart</code>
-        verified against the vendor's own manifest, a microVM
-        <code>kernel.org/linux</code> carrying an RDMA stack, VFIO passthrough and
-        GPUDirect, and <code>crun</code>. The two GPU rows differ in kind and the
-        recipes say so: ROCm is source we compile, CUDA is an archive we fetch under a
-        licence that names which files may travel.</p>
-      <pre class="snippet"><code># install from the signed OCI registry, verifying against the pinned key
-$ PKGX_DIST=oci://ghcr.io/go-pkgx/packages PKGX_VERIFY=1 pkgm install lz4.org
+  <section id="modules"><div class="wrap">
+    <span class="eyebrow">Environments and HPC</span>
+    <h2>A module system, without Lmod.</h2>
+    <p class="lead">A module system does two things: it resolves what a package needs, and it edits your shell. <code>pkgx +a +b</code> already did the first. <code>pkge</code> does the second — a front-end shaped like Lmod's, over pkgx's own resolution, with no Lua interpreter and no modulefile tree. It ships inside the pkgx binary; there is nothing else to install.</p>
+    <div class="term">
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">pkge — zsh</span></div>
+<pre><span class="c-cmd">$ eval</span> "$(pkgx env init)"          <span class="c-com"># in a profile</span>
+<span class="c-cmd">$ pkge load</span> stedolan.github.io/jq
+<span class="c-cmd">$ command -v</span> jq
+<span class="c-out">~/.pkgx/stedolan.github.io/jq/v1.8.2/bin/jq</span>
+<span class="c-cmd">$ pkge unload</span> stedolan.github.io/jq
+<span class="c-cmd">$ command -v</span> jq
+<span class="c-out">/usr/bin/jq</span>                        <span class="c-com"># back, exactly as it was</span></pre>
+    </div>
+    <div class="grid">
+      <div class="card"><div class="ico">↩️</div><h3>Unloading is exact</h3><p>Because loading never edits incrementally: it restores the environment it first saw and recomposes from the whole spec set. So <code>unload b</code> after <code>load a b c</code> leaves precisely what <code>load a c</code> would have — whatever order things happened in.</p></div>
+      <div class="card"><div class="ico">🤝</div><h3>It defers to a real Lmod</h3><p>Where a site already runs one, publish modulefiles — <code>pkgx --modulefile +openmpi.org@5</code> — and let the site's own Lmod load them, so conflicts, hierarchies and <code>spider</code> keep working.</p></div>
+      <div class="card"><div class="ico">🚫</div><h3>And refuses to shadow it</h3><p><code>pkgx env init --module</code> defines <code>module</code> and <code>ml</code> only where there is no Lmod. Two implementations answering one command is how a support ticket becomes unanswerable.</p></div>
+    </div>
+  </div></section>
 
-# …or from the all-platform GitHub Pages mirror
-$ PKGX_DIST=https://go-pkgx.github.io/packages pkgm install lz4.org
+  <section id="registry"><div class="wrap">
+    <span class="eyebrow">Provenance</span>
+    <h2>A signed, attested package registry.</h2>
+    <p class="lead">The org runs its own bottle registry at <code>ghcr.io/go-pkgx/packages</code>. A pure-Go factory builds pkgx pantry recipes with <b>bk</b>, a CGO-free re-implementation of brewkit, and publishes through two channels: the signed OCI registry and a GitHub Pages <code>pkgx-dist</code> mirror.</p>
+    <div class="grid">
+      <div class="card"><div class="ico">🔏</div><h3>Fail-closed by default</h3><p>Each bottle carries, as OCI referrers, a CycloneDX SBOM, an in-toto SLSA provenance statement and a cosign-style signature verified against a pinned key. On install <code>PKGX_VERIFY=1</code> refuses an unsigned or badly-signed bottle.</p></div>
+      <div class="card"><div class="ico">📥</div><h3>What went in, not only what came out</h3><p>The provenance records the source archive's SHA-256 (or a git commit) as well as the artefact. Over half this pantry builds from tarballs GitHub <i>generates</i> on request rather than stores, so for those it is the first stored record they have ever had.</p></div>
+      <div class="card"><div class="ico">🧱</div><h3>Built where nothing leaks in</h3><p>Linux builds run inside a FROM-scratch rootfs staged from bottles — no distribution libc and no distribution compiler take part. The output carries its <code>PT_INTERP</code> into the pkgx prefix and no distribution strings at all.</p></div>
+      <div class="card"><div class="ico">🔑</div><h3>No long-lived credential</h3><p>Publishing uses the workflow's native <code>GITHUB_TOKEN</code>, never a personal token, and every <code>(project, version, platform)</code> already present is skipped, so the catalogue grows progressively rather than being rebuilt.</p></div>
+    </div>
+  </div></section>
 
-# …or pull a bottle with any OCI client
-$ docker pull ghcr.io/go-pkgx/packages/lz4.org:1.10.0</code></pre>
-      <p class="registry-links">
-        <a href="https://github.com/go-pkgx/packages">factory</a> ·
-        <a href="https://go-pkgx.github.io/docs/registry/">registry docs</a> ·
-        <a href="https://go-pkgx.github.io/docs/supply-chain/">supply chain</a>
-      </p>
-    </section>
+  <section id="eco" style="padding-top:6px"><div class="wrap">
+    <div class="band">
+      <h2>Packaging that ships like Go.</h2>
+      <p>No cgo, no interpreter, no runtime to install first. One static binary per job, a backend they share, and bottles that say where they came from.</p>
+      <a class="btn btn-ghost" href="https://github.com/go-pkgx">Read the source on GitHub →</a>
+    </div>
+  </div></section>
 
-    <p class="replaces">
-      <strong>One backend, no duplication:</strong> both tools import <code>go-pkgx/bottle</code> — the single
-      source of truth for the pkgx bottle protocol. <code>net/http</code> (with an embedded CA bundle) replaces
-      curl+openssl, <code>compress/gzip</code> + a pure-Go xz decoder replace info-zip+xz, and there is no
-      script runtime at all. pkgm's command surface and prefix logic mirror the reference pkgm, so it is a
-      <strong>drop-in replacement</strong>; pkgx's <code>&lt;pkg&gt;</code> and <code>+pkg</code> forms mirror
-      the reference runtime.
-    </p>
-
-    <p class="principles">Pure Go with cgo disabled &mdash; no C toolchain, no runtime fetch, no vendored
-      assets &mdash; binaries that cross-compile to <strong>six 64-bit targets</strong> (linux &amp; darwin,
-      amd64/arm64, plus riscv64 &amp; ppc64le). On <code>FROM scratch</code> the bottle backend reads each
-      bottle's ELF <code>DT_NEEDED</code> to auto-complete the implicit libc/gcc closure the pantry graph
-      omits, pulling the provider version that ships the <em>exact</em> soname an ABI needs. Everything is
-      <strong>BSD-3-Clause</strong>.</p>
-  </main>
-
-  <footer class="wrap">
-    BSD-3-Clause · <a href="https://github.com/go-pkgx">github.com/go-pkgx</a>
-  </footer>
-  <script>
-  (function(){
-    var order=['system','light','dark'], root=document.documentElement;
-    var labels={system:'🖥️ System',light:'☀️ Light',dark:'🌙 Dark'};
-    function apply(m){ if(m==='system'){root.removeAttribute('data-theme');}else{root.setAttribute('data-theme',m);} localStorage.setItem('theme',m); var el=document.getElementById('theme-label'); if(el)el.textContent=labels[m]; }
-    var mode=localStorage.getItem('theme')||'system'; apply(mode);
-    var btn=document.getElementById('theme-toggle');
-    if(btn) btn.addEventListener('click',function(){ mode=order[(order.indexOf(mode)+1)%order.length]; apply(mode); });
-  })();
-  </script>
+  <footer><div class="wrap"><span>© the go-pkgx authors · BSD-3-Clause</span><span>Pure Go · CGO_ENABLED=0 · runs on FROM scratch</span></div></footer>
 </body>
 </html>

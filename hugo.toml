@@ -5,6 +5,29 @@ disableKinds = ["taxonomy", "term", "RSS", "sitemap", "404"]
 [markup.goldmark.renderer]
   unsafe = true
 
+# The brand colours the shared stylesheet reads. They are NOT a choice made
+# here: static/img/logo.svg carries the gradient #F59E0B → #B45309, and these
+# follow it. go-authn and go-fileshare are cyan for the same reason — their own
+# logos are — which is why the stylesheet takes them as parameters instead of
+# hard-coding one family's colour into a file three orgs share.
+#
+# The mapping mirrors theirs exactly: the logo's DARKER stop is the light-mode
+# accent (it has to carry text on white), the BRIGHTER stop is the dark-mode
+# one, and `deep` is a further step down for the gradient's far end.
+[params.brand]
+  base   = "#B45309"   # logo's darker stop — light-mode accent and gradient start
+  deep   = "#78350F"   # a step darker again — gradient end
+  bright = "#F59E0B"   # logo's brighter stop — dark-mode accent
+  shadow = "rgba(180,83,9,.7)"   # = base, for the primary button's drop shadow
+  # Chip tints: `base`/`bright` mixed into white at the same 12% and 30% the
+  # cyan family uses, so the two read as the same design in different hues.
+  chipBg         = "#fef3e2"
+  chipBorder     = "#fce2b6"
+  chipFg         = "#78350F"
+  chipBgDark     = "rgba(245,158,11,.14)"
+  chipBorderDark = "rgba(245,158,11,.32)"
+  chipFgDark     = "#fcd34d"
+
 [[params.repos]]
   name = "pkgx"
   pkg = "github.com/go-pkgx/pkgx"
