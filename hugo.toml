@@ -57,6 +57,34 @@ disableKinds = ["taxonomy", "term", "RSS", "sitemap", "404"]
   blurb = "**Sync a local mirror** of pkgx bottles from the official dist into the same servable tree layout — per os/arch, incremental, with `--closure` to pull a package's full runtime closure (plus the implicit `FROM scratch` system libs). Serve it statically and point pkgm/pkgx at it with `PKGX_DIST=<mirror-url>`."
 
 [[params.repos]]
+  name = "bk"
+  pkg = "github.com/go-pkgx/bk"
+  url = "https://github.com/go-pkgx/bk"
+  status = "ready"
+  blurb = "**The build tool**, a from-scratch `CGO_ENABLED=0` reimplementation of pkgx's brewkit — which was Deno/TypeScript with Ruby and `patchelf` helpers. It reads a pantry `package.yml`, builds in a pkgx environment, relocates the install tree and packages a bottle. The reference tool is *native*: everything pivots on the host being the thing it builds for. Here **Target is not Host by design**, so the target platform is a first-class value and a **Windows PE bottle built on a Linux or macOS host** is a supported path rather than a retrofit."
+
+[[params.repos]]
+  name = "packages"
+  pkg = "github.com/go-pkgx/packages"
+  url = "https://github.com/go-pkgx/packages"
+  status = "ready"
+  blurb = "**The factory.** It runs `bk` over the pkgx pantry and publishes to `ghcr.io/go-pkgx/packages`, each package an OCI artifact carrying a CycloneDX SBOM and an in-toto SLSA provenance statement as OCI referrers. Measured from the published `registry.json` on 2026-09-26: **1 584 projects, 42 530 bottles** across linux/aarch64 (15 135), linux/x86-64 (13 253), darwin/x86-64 (7 029), darwin/aarch64 (6 559) and windows/x86-64 (554). It is a moving target, so re-measure rather than trust this line."
+
+[[params.repos]]
+  name = "pantry-overlay"
+  pkg = "github.com/go-pkgx/pantry-overlay"
+  url = "https://github.com/go-pkgx/pantry-overlay"
+  status = "ready"
+  blurb = "**The corrections**, consumed through `PKGX_PANTRY_OVERLAY`: each recipe here overrides the matching upstream one and everything else falls back. It exists because an upstream recipe can be unsatisfiable against the current registry — curl, wget and git pin `openssl.org: ^1.1` while openssl is 3.x and 4.x — so without the overlay `pkgm install` cannot resolve the closure the published bottles were actually built against."
+
+[[params.repos]]
+  name = "registry-viewer"
+  pkg = "github.com/go-pkgx/registry-viewer"
+  url = "https://github.com/go-pkgx/registry-viewer"
+  status = "ready"
+  blurb = "**The tree you are already using.** A `CGO_ENABLED=0` WASM browser app that renders the registry as a filterable `TreeTable`, drawn to a `<canvas>` with go-widgets/toolkit and go-widgets/painter. It powers <https://go-pkgx.github.io/packages/>, reading the `registry.json` the factory emits."
+
+[[params.repos]]
   name = "docs"
   pkg = "github.com/go-pkgx/pkgx"
   url = "https://go-pkgx.github.io/docs/"
