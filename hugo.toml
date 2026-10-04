@@ -89,4 +89,4 @@ disableKinds = ["taxonomy", "term", "RSS", "sitemap", "404"]
   pkg = "github.com/go-pkgx/pkgx"
   url = "https://go-pkgx.github.io/docs/"
   status = "ready"
-  blurb = "Documentation (MkDocs Material): usage, the **full-pantry FROM-scratch conformance sweep** (1818 projects), and the maintained `soname → project` fix list. A pantry-wide audit found **1818 of 1896** projects publish a linux bottle, and after the soname-exact fix **73 of 81** previously-failing projects run on scratch."
+  blurb = "Documentation (MkDocs Material): usage, the **full-pantry FROM-scratch conformance sweep** (1818 projects), and the maintained `soname → project` fix list. A pantry-wide audit on **2026-09-26** found **1818 of 1896** projects published a linux bottle (the pantry held 1899 on 2026-10-04), and after the soname-exact fix **73 of 81** previously-failing projects run on scratch."
