@@ -1,0 +1,50 @@
+# Fail when a version written on the site has fallen behind its release.
+#
+# SCHEDULED on purpose. The site builds on push to this repository and on pull
+# requests, and a release is published in a DIFFERENT repository — so a check
+# that runs only on those events cannot see the one thing that makes the answer
+# change. On 2026-10-04 the install section told visitors to install pkgm
+# v0.1.4 and pkgx v0.1.5 while the releases were v0.1.7 and v0.1.10, and
+# nothing anywhere said so.
+name: versions on the site match their releases
+
+on:
+  schedule:
+    # Daily. A release is not urgent to the hour, and this is three
+    # unauthenticated API calls.
+    - cron: '17 6 * * *'
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  versioncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          # Pinned, not `stable`. An unpinned toolchain changes the compiler
+          # under the repository with no commit to point at, which is how this
+          # fleet lost a morning to gofmt reindentation on 2026-08-30.
+          go-version: '1.27.1'
+      - name: gofmt
+        working-directory: tools/versioncheck
+        run: test -z "$(gofmt -l .)" || { gofmt -d .; exit 1; }
+      - name: vet
+        working-directory: tools/versioncheck
+        run: go vet ./...
+      - name: test
+        working-directory: tools/versioncheck
+        run: go test ./...
+      - name: the versions the site prints are the versions that exist
+        # From the module directory, not the repository root: the root holds
+        # no go.mod, so `go run ./tools/versioncheck` there reports "cannot
+        # find main module". The tool reads the site through its -root flag,
+        # which defaults to ../.. for exactly this reason.
+        working-directory: tools/versioncheck
+        run: go run .
