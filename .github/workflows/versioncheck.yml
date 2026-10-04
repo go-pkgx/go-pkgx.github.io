@@ -25,7 +25,7 @@ jobs:
   versioncheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           # Pinned, not `stable`. An unpinned toolchain changes the compiler
