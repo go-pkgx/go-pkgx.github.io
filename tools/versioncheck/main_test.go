@@ -29,9 +29,9 @@ func tree(files map[string]string) fs.FS {
 
 func TestRunPassesWhenEveryPinIsCurrent(t *testing.T) {
 	root := tree(map[string]string{
-		"layouts/index.html":  "sh -s -- pkgm v0.1.7\nsh -s -- pkgx v0.1.10\n$env:PKGM_VERSION='v0.1.7'\n",
-		"static/install.sh":   "#   … | sh -s -- pkgm v0.1.7\n",
-		"static/install.ps1":  "  .\\install.ps1 pkgx v0.1.10\n",
+		"layouts/index.html": "sh -s -- pkgm v0.1.7\nsh -s -- pkgx v0.1.10\n$env:PKGM_VERSION='v0.1.7'\n",
+		"static/install.sh":  "#   … | sh -s -- pkgm v0.1.7\n",
+		"static/install.ps1": "  .\\install.ps1 pkgx v0.1.10\n",
 	})
 	var out strings.Builder
 	if err := run(root, stub(map[string]string{"pkgm": "v0.1.7", "pkgx": "v0.1.10"}), &out); err != nil {
