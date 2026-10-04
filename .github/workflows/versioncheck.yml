@@ -42,5 +42,9 @@ jobs:
         working-directory: tools/versioncheck
         run: go test ./...
       - name: the versions the site prints are the versions that exist
-        run: go run ./tools/versioncheck
-        working-directory: .
+        # From the module directory, not the repository root: the root holds
+        # no go.mod, so `go run ./tools/versioncheck` there reports "cannot
+        # find main module". The tool reads the site through its -root flag,
+        # which defaults to ../.. for exactly this reason.
+        working-directory: tools/versioncheck
+        run: go run .
