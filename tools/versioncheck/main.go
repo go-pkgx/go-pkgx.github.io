@@ -31,6 +31,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -158,23 +159,48 @@ func collect(root fs.FS) ([]pin, error) {
 	return pins, nil
 }
 
+// apiBase is where the release lookup goes. A variable so a test can point it
+// at an httptest server; nothing else changes it.
+var apiBase = "https://api.github.com"
+
 // latestRelease asks GitHub for a repository's newest release tag.
+//
+// It authenticates when the environment offers a token. Unauthenticated the
+// limit is 60 requests an hour PER IP, shared with every other job on that
+// runner, and this workflow runs on every pull request and every push as well
+// as on its daily cron -- so the lane goes red for a reason that has nothing
+// to do with a version. With GITHUB_TOKEN the limit is 1 000 an hour for the
+// repository. The token is only ever put in a header; it is never printed,
+// including in the errors below.
 func latestRelease(tool string) (string, error) {
 	c := &http.Client{Timeout: 30 * time.Second}
-	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/go-pkgx/"+tool+"/releases/latest", nil)
+	req, err := http.NewRequest(http.MethodGet, apiBase+"/repos/go-pkgx/"+tool+"/releases/latest", nil)
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "go-pkgx-versioncheck")
+	if tok := githubToken(); tok != "" {
+		req.Header.Set("Authorization", "Bearer "+tok)
+	}
 	resp, err := c.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		// Named, because an anonymous 403 here is a rate limit and reads
-		// nothing like one.
+		// ⛔ A call that did not happen must not read as a verdict about a
+		// version. A 403 with no requests left is the rate limit, and saying
+		// "GET releases/latest: 403 Forbidden" beside a list of pinned
+		// versions invites exactly the wrong conclusion -- that something is
+		// out of date -- when in fact NOTHING was compared.
+		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
+			if resp.Header.Get("X-RateLimit-Remaining") == "0" {
+				return "", fmt.Errorf("rate limited by GitHub (%s), so NO version was compared%s; "+
+					"set GITHUB_TOKEN to raise the limit from 60/hour per IP to 1000/hour",
+					resp.Status, resetHint(resp.Header.Get("X-RateLimit-Reset")))
+			}
+		}
 		return "", fmt.Errorf("GET releases/latest: %s", resp.Status)
 	}
 	var body struct {
@@ -187,4 +213,28 @@ func latestRelease(tool string) (string, error) {
 		return "", fmt.Errorf("latest release is %q, which is not a semver tag", body.TagName)
 	}
 	return body.TagName, nil
+}
+
+// githubToken reads the token CI provides, without ever logging it. GH_TOKEN
+// is what the gh CLI sets, GITHUB_TOKEN what Actions sets; either will do.
+func githubToken() string {
+	for _, k := range []string{"GITHUB_TOKEN", "GH_TOKEN"} {
+		if v := strings.TrimSpace(os.Getenv(k)); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// resetHint turns the rate-limit reset header into something a person can act
+// on. An unparseable or absent value yields nothing rather than a wrong time.
+func resetHint(epoch string) string {
+	if epoch == "" {
+		return ""
+	}
+	n, err := strconv.ParseInt(epoch, 10, 64)
+	if err != nil {
+		return ""
+	}
+	return ", which resets at " + time.Unix(n, 0).UTC().Format("15:04:05Z")
 }
