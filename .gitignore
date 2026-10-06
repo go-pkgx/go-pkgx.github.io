@@ -1,3 +1,21 @@
 public/
 resources/
 .hugo_build.lock
+
+# `go build` in tools/<name>/ writes tools/<name>/<name>. Nothing ignored it and
+# `git add -A` duly committed one: 8 887 250 bytes of Mach-O arm64, tracked
+# since #16 -- the very change that added the tool.
+#
+# An ALLOW-LIST, not a list of names. A rule naming the binary it has already
+# met goes stale at the first rename and at every new tool, and the artefact
+# nobody has a rule for is exactly the one that walks in. Verify BOTH ways:
+#
+#     git check-ignore -v tools/versioncheck/versioncheck   # must be ignored
+#     git check-ignore -v tools/versioncheck/main.go        # must print nothing
+#
+tools/*/*
+!tools/*/*.go
+!tools/*/go.mod
+!tools/*/go.sum
+!tools/*/testdata/
+!tools/*/README.md
