@@ -12,7 +12,7 @@
   A piped script takes no arguments, so on Windows the version is pinned with
   the environment variable above. Saved to disk, both are positional:
 
-      .\install.ps1 pkgx v0.9.2
+      .\install.ps1 pkgx v0.10.1
       .\install.ps1 pkgx latest
 
   Selects one of {pkgm, pkgx, mirror}, downloads its static <tool>.exe for your
