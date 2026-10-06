@@ -27,6 +27,11 @@ disableKinds = ["taxonomy", "term", "RSS", "sitemap", "404"]
   chipBgDark     = "rgba(245,158,11,.14)"
   chipBorderDark = "rgba(245,158,11,.32)"
   chipFgDark     = "#fcd34d"
+  # The three that used to be written into the rules: the nav glyph's drop
+  # shadow and the two hero washes. = base, base and deep.
+  glow     = "rgba(180,83,9,.6)"
+  wash     = "rgba(180,83,9,.10)"
+  washDeep = "rgba(120,53,15,.06)"
 
 [[params.repos]]
   name = "pkgx"

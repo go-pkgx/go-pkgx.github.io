@@ -19,6 +19,16 @@
 {{ $deep   := $br.deep   | default "#054A66" }}
 {{ $bright := $br.bright | default "#22CCE2" }}
 {{ $shadow := $br.shadow | default "rgba(0,121,168,.7)" }}
+{{- /* Three more that were written into the RULES rather than taken as
+     parameters, so every org using this sheet glowed cyan whatever its logo
+     was. Measured on the published amber page: go-pkgx's rendered CSS carried
+     four cyan literals -- the nav glyph's drop shadow, both hero washes and
+     the performance hero's. Each default below is the exact text that was in
+     the rule, so a build with no [params.brand] still emits a byte-identical
+     <style> block and the check in the README keeps meaning something. */}}
+{{- $glow     := $br.glow     | default "rgba(0,121,168,.6)" }}
+{{- $wash     := $br.wash     | default "rgba(0,121,168,.10)" }}
+{{- $washDeep := $br.washDeep | default "rgba(5,74,102,.06)" }}
 {{ $chipBg     := $br.chipBg     | default "#e8f8fc" }}
 {{ $chipBorder := $br.chipBorder | default "#bde9f4" }}
 {{ $chipFg     := $br.chipFg     | default "#054A66" }}
@@ -86,7 +96,7 @@
   .nav .wrap{display:flex;align-items:center;gap:14px;height:64px}
   .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.02em}
   .glyph{width:32px;height:32px;border-radius:9px;display:block;
-    box-shadow:0 6px 16px -6px rgba(0,121,168,.6)}
+    box-shadow:0 6px 16px -6px {{ $glow | safeCSS }}}
   .nav nav{margin-left:auto;display:flex;gap:26px;color:var(--slate);font-weight:600;font-size:14px}
   .nav nav a:hover{color:var(--ink)}
   .theme-toggle{display:inline-flex;align-items:center;gap:7px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;
@@ -100,8 +110,8 @@
   .btn-ghost:hover{border-color:var(--ghost-border-hover)}
   /* hero */
   .hero{padding:74px 0 30px;background:
-    radial-gradient(900px 380px at 78% -8%,rgba(0,121,168,.10),transparent 60%),
-    radial-gradient(700px 320px at 0% 0%,rgba(5,74,102,.06),transparent 55%)}
+    radial-gradient(900px 380px at 78% -8%,{{ $wash | safeCSS }},transparent 60%),
+    radial-gradient(700px 320px at 0% 0%,{{ $washDeep | safeCSS }},transparent 55%)}
   .hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
   .pill{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--chip-fg);
     background:var(--chip-bg);border:1px solid var(--chip-border);padding:6px 12px;border-radius:999px}
@@ -180,7 +190,7 @@
   /* performance page */
   .pwrap{max-width:1120px;margin:0 auto;padding:0 24px}
   .phero{padding:64px 0 18px;background:
-    radial-gradient(900px 360px at 80% -10%,rgba(0,121,168,.10),transparent 60%)}
+    radial-gradient(900px 360px at 80% -10%,{{ $wash | safeCSS }},transparent 60%)}
   .phero h1{font-size:46px;line-height:1.05;letter-spacing:-.035em;font-weight:850;margin:10px 0 0}
   .phero h1 .accent{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
   .phero .sub{font-size:18px;color:var(--slate);margin:16px 0 0;max-width:760px}
