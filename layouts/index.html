@@ -11,7 +11,7 @@
 <body class="lm">
   <header class="nav"><div class="wrap">
     <a class="brand" href="/"><img class="glyph" src="/img/logo.svg" width="32" height="32" alt="go-pkgx logo"> go-pkgx</a>
-    <nav><a href="#install">Install</a><a href="#features">Why</a><a href="#modules">Modules</a><a href="#registry">Registry</a></nav>
+    <nav><a href="#install">Install</a><a href="#features">Why</a><a href="#browse">Browse</a><a href="#lock">Lock</a><a href="#modules">Modules</a><a href="#registry">Registry</a></nav>
     {{ partial "theme-toggle.html" . }}
     <a class="btn btn-ghost" href="https://github.com/go-pkgx">GitHub</a>
   </div></header>
@@ -59,12 +59,12 @@
     <div class="grid">
       <div class="card">
         <div class="ico">🐧</div><h3>Linux / macOS</h3>
-<pre><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.2.2
-curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.9.0</code></pre>
+<pre><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.2.3
+curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.9.2</code></pre>
       </div>
       <div class="card">
         <div class="ico">🪟</div><h3>Windows (PowerShell)</h3>
-<pre><code>$env:PKGM_VERSION='v0.2.2'
+<pre><code>$env:PKGM_VERSION='v0.2.3'
 irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
       </div>
       <div class="card wide">
@@ -93,8 +93,48 @@ irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
     <div class="stats">
       <div><div class="n">{{ len .Site.Params.repos }}</div><div class="l">repositories, one job each</div></div>
       <div><div class="n">~9&nbsp;MB</div><div class="l">static binary, against ~515&nbsp;MB of reference closure</div></div>
-      <div><div class="n">1818</div><div class="l">of 1896 pantry projects published a linux bottle, audited 2026-09-26 (the pantry held 1899 on 2026-10-04)</div></div>
+      <div><div class="n">1430</div><div class="l">of 1908 projects carry a linux/aarch64 bottle, read off the catalogue the factory published on 2026-10-06 — and the other 478 are <i>named</i>, marked as having none here, rather than hidden</div></div>
       <div><div class="n">0</div><div class="l">runtime dependencies — no libc, no deno, no curl</div></div>
+    </div>
+  </div></section>
+
+  <section id="browse"><div class="wrap">
+    <span class="eyebrow">Finding things</span>
+    <h2>A tree you can walk, offline, in an empty image.</h2>
+    <p class="lead">nix, guix and spack all let you browse what exists before you install it. Here the same thing works where none of them run: a single static binary, a catalogue cached as one file, and no network after the first fetch. <code>&lt;TAB&gt;</code> answers in <b>7.6&nbsp;ms</b> because nothing on that path opens a socket.</p>
+    <div class="term">
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">pkgx — zsh</span></div>
+<pre><span class="c-com"># once, with a network. Then never again.</span>
+<span class="c-cmd">$</span> pkgx catalog update
+1908 project(s) → ~/.pkgx/catalog/linux-x86-64.json
+
+<span class="c-com"># a namespace lists what it CONTAINS, a package what it NEEDS</span>
+<span class="c-cmd">$</span> pkgx ls --tree curl.se
+curl.se — 8.17.0  ✓
+  curl.se/ca-certs  2026.09.25  ✓
+  doxygen.nl  (no bottle here)
+  openssl.org  3.6.0  ✓ 3.5.1
+
+<span class="c-com"># you know the command, not the package</span>
+<span class="c-cmd">$</span> pkgx search rg
+crates.io/ripgrep                        rg  14.1.1
+</pre>
+    </div>
+    <div class="cards" style="margin-top:14px">
+      <div class="card"><div class="ico">🌳</div><h3>A node has two kinds of thing under it</h3><p><code>gnu.org</code> contains <code>gnu.org/bash</code> because of how it is <b>named</b>; <code>curl.se</code> has <code>openssl.org</code> under it because of what it <b>needs</b>. nix and guix keep the two in separate commands; here the node decides, because the person typing already knows which they named.</p></div>
+      <div class="card"><div class="ico">⌨️</div><h3>The binary answers &lt;TAB&gt;</h3><p>Spack generates a completion file and commits it; guix hand-writes one per shell. Both then need a check that it still matches. Nix has the binary answer, and so does this — because what is being completed is the <b>registry</b>, which changes without the binary changing, and because there is no completion framework in an empty image.</p></div>
+      <div class="card"><div class="ico">🔭</div><h3>Everything is named; what is here is marked</h3><p>A catalogue is published <b>per platform</b>: 537 of 1908 projects have no bottle for darwin/aarch64. Dropping those names would say they do not exist, which is false. Marking them says what to build next.</p></div>
+      <div class="card"><div class="ico">🖥️</div><h3>And a full-screen browser</h3><p><code>pkgx browse</code> walks it with the arrow keys, <code>/</code> searches, space pins — and <code>q</code> prints what you pinned on stdout, so <code>pkgx +$(pkgx browse)</code> composes. Without a terminal it prints the tree and exits.</p></div>
+    </div>
+  </div></section>
+
+  <section id="lock"><div class="wrap">
+    <span class="eyebrow">Reproducibility</span>
+    <h2>The same build, later.</h2>
+    <p class="lead">The same pantry commit resolved tcl to <b>9.0.4</b> and then to <b>9.1.0</b> four hours apart, because a recipe asks GitHub at resolution time. <code>bk lock</code> writes down what a set means <i>today</i> — Spack's shape: a Merkle hash over the platform, the version and the parsed recipe, so a recipe edited <b>under</b> a pin is visible where a version alone would say nothing.</p>
+    <div class="cards">
+      <div class="card"><div class="ico">📌</div><h3>Every pin is a root</h3><p><code>pkgx --lock f.hcl</code> runs exactly those versions and <code>bk factory --lock f.hcl</code> builds them — not just the lock's own roots, so a transitive dependency cannot move underneath. A set that will not resolve exactly <b>fails</b>, as cargo's <code>--locked</code> does.</p></div>
+      <div class="card"><div class="ico">🧭</div><h3>It knows where it was taken</h3><p>A lock records its platform and refuses to be honoured elsewhere, by name. The versions a platform carries are not the versions another has, and failing late inside a resolver would blame a version instead of the lock.</p></div>
     </div>
   </div></section>
 
