@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"io/fs"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -101,5 +103,108 @@ func TestCollectSkipsAMissingPath(t *testing.T) {
 	}
 	if len(pins) != 1 {
 		t.Fatalf("pins = %d; want 1", len(pins))
+	}
+}
+
+// ⛔ A call that did not happen must not read as a verdict about a version.
+// The lane went red with `GET releases/latest: 403 Forbidden` printed where a
+// list of stale pins usually goes, which invites exactly the wrong conclusion:
+// that something is out of date, when in fact nothing was compared.
+func TestARateLimitSaysNothingWasCompared(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-RateLimit-Remaining", "0")
+		w.Header().Set("X-RateLimit-Reset", "1760000000")
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer srv.Close()
+	old := apiBase
+	apiBase = srv.URL
+	defer func() { apiBase = old }()
+
+	_, err := latestRelease("pkgm")
+	if err == nil {
+		t.Fatal("a 403 must still be an error")
+	}
+	got := err.Error()
+	for _, want := range []string{"rate limited", "NO version was compared", "GITHUB_TOKEN"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("error %q does not say %q", got, want)
+		}
+	}
+	if !strings.Contains(got, "resets at") {
+		t.Errorf("error %q does not say when it resets", got)
+	}
+}
+
+// A 403 that is NOT a rate limit keeps the plain message: inventing a rate
+// limit where there is none would be the same mistake in the other direction.
+func TestAPlainForbiddenIsNotCalledARateLimit(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-RateLimit-Remaining", "57")
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer srv.Close()
+	old := apiBase
+	apiBase = srv.URL
+	defer func() { apiBase = old }()
+
+	_, err := latestRelease("pkgm")
+	if err == nil {
+		t.Fatal("want an error")
+	}
+	if strings.Contains(err.Error(), "rate limited") {
+		t.Errorf("error %q calls a plain 403 a rate limit", err)
+	}
+}
+
+// The token goes in a header and nowhere else. A test is the only place that
+// can say so without printing it.
+func TestTheTokenTravelsInTheHeaderOnly(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "a-token-that-must-not-be-logged")
+	var seen string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"tag_name":"v1.2.3"}`))
+	}))
+	defer srv.Close()
+	old := apiBase
+	apiBase = srv.URL
+	defer func() { apiBase = old }()
+
+	got, err := latestRelease("pkgm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "v1.2.3" {
+		t.Errorf("tag = %q, want v1.2.3", got)
+	}
+	if seen != "Bearer a-token-that-must-not-be-logged" {
+		t.Errorf("Authorization header = %q", seen)
+	}
+}
+
+// And with no token in the environment, no Authorization header at all --
+// sending an empty Bearer is a 401 waiting to be misread as something else.
+func TestNoTokenMeansNoHeader(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("GH_TOKEN", "")
+	var seen string
+	var had bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen, had = r.Header.Get("Authorization"), r.Header.Values("Authorization") != nil
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"tag_name":"v1.2.3"}`))
+	}))
+	defer srv.Close()
+	old := apiBase
+	apiBase = srv.URL
+	defer func() { apiBase = old }()
+
+	if _, err := latestRelease("pkgm"); err != nil {
+		t.Fatal(err)
+	}
+	if had || seen != "" {
+		t.Errorf("Authorization header sent with no token: %q", seen)
 	}
 }
