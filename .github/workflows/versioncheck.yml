@@ -10,8 +10,7 @@ name: versions on the site match their releases
 
 on:
   schedule:
-    # Daily. A release is not urgent to the hour, and this is three
-    # unauthenticated API calls.
+    # Daily. A release is not urgent to the hour, and this is two API calls.
     - cron: '17 6 * * *'
   pull_request:
   push:
@@ -47,4 +46,18 @@ jobs:
         # find main module". The tool reads the site through its -root flag,
         # which defaults to ../.. for exactly this reason.
         working-directory: tools/versioncheck
+        # ⛔ AUTHENTICATED. The calls used to go out anonymously, and the
+        # anonymous limit is 60 an hour PER IP, shared with every other job on
+        # that runner -- while this workflow runs on every pull request and
+        # every push as well as its daily cron. It went red with
+        #
+        #     versioncheck: pkgm: GET releases/latest: 403 Forbidden
+        #
+        # printed where the list of stale pins goes, which reads as "a version
+        # is out of date" when in fact nothing was compared at all.
+        # github.token raises it to 1 000 an hour for this repository, and
+        # `contents: read` is all it needs to read a public repository's
+        # releases.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: go run .
