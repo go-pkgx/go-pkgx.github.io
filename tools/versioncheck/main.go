@@ -29,6 +29,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -65,11 +66,59 @@ func main() {
 	// directory: `go run ./tools/versioncheck` from the root cannot work when
 	// the root is not itself a module.
 	root := flag.String("root", "../..", "the site checkout to read")
+	fix := flag.Bool("fix", false,
+		"rewrite the pins that are behind, then CHECK AGAIN and fail if anything is still behind")
 	flag.Parse()
 	if err := run(os.DirFS(*root), latestRelease, os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		if !*fix {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		if err := fixAndVerify(*root, latestRelease, os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
+}
+
+// fixAndVerify rewrites, then runs the ORIGINAL check against the tree it
+// just wrote.
+//
+// A fixer that reports success on its own say-so is the failure this whole
+// file is about. The only evidence that a rewrite worked is the check that
+// found the problem passing afterwards — against the bytes on disk, not
+// against the plan.
+func fixAndVerify(root string, latest func(string) (string, error), out io.Writer) error {
+	fsys := os.DirFS(root)
+	pins, err := collect(fsys)
+	if err != nil {
+		return err
+	}
+	current := map[string]string{}
+	for _, p := range pins {
+		if _, ok := current[p.tool]; ok {
+			continue
+		}
+		v, err := latest(p.tool)
+		if err != nil {
+			return fmt.Errorf("versioncheck: %s: %w", p.tool, err)
+		}
+		current[p.tool] = v
+	}
+	var behind []pin
+	for _, p := range pins {
+		if semver.Compare(p.ver, current[p.tool]) < 0 {
+			behind = append(behind, p)
+		}
+	}
+	if len(behind) == 0 {
+		return nil
+	}
+	fmt.Fprintf(out, "rewriting %d pin(s):\n", len(behind))
+	if err := fixPins(root, behind, current, out); err != nil {
+		return err
+	}
+	return run(os.DirFS(root), latest, out)
 }
 
 // run is main with its two edges injected, so the whole thing is testable
@@ -237,4 +286,85 @@ func resetHint(epoch string) string {
 		return ""
 	}
 	return ", which resets at " + time.Unix(n, 0).UTC().Format("15:04:05Z")
+}
+
+// fixPins rewrites the pins that have fallen behind, and NOTHING else.
+//
+// # WHY THE FIXER BELONGS BESIDE THE CHECKER
+//
+// The check knew the file, the line, the tool and both versions; the
+// rewriting was done by hand, three times in one evening, with a throwaway
+// `python3 -c` and a regex over the whole file. That is two descriptions of
+// the same rule, and the ad-hoc one is the one nobody tests.
+//
+// It cost exactly what an untested rewriter costs: one of those edits
+// matched no text at all, reported nothing, and the commit went out anyway
+// — a pull request describing a change that was not in the tree.
+//
+// So the rewrite reuses the SAME regexps the scan uses, and touches only a
+// (file, line) the scan reported as behind. A regex over a whole file would
+// also rewrite a version inside prose that was describing history.
+func fixPins(dir string, behind []pin, current map[string]string, out io.Writer) error {
+	byFile := map[string][]pin{}
+	for _, p := range behind {
+		byFile[p.file] = append(byFile[p.file], p)
+	}
+	files := make([]string, 0, len(byFile))
+	for f := range byFile {
+		files = append(files, f)
+	}
+	sort.Strings(files)
+
+	for _, f := range files {
+		full := filepath.Join(dir, f)
+		b, err := os.ReadFile(full)
+		if err != nil {
+			return err
+		}
+		lines := strings.Split(string(b), "\n")
+		want := map[int]bool{}
+		for _, p := range byFile[f] {
+			want[p.line] = true
+		}
+		changed := 0
+		for i := range lines {
+			if !want[i+1] {
+				continue
+			}
+			before := lines[i]
+			lines[i] = rePositional.ReplaceAllStringFunc(lines[i], func(m string) string {
+				g := rePositional.FindStringSubmatch(m)
+				if v, ok := current[g[1]]; ok {
+					return strings.Replace(m, g[2], v, 1)
+				}
+				return m
+			})
+			lines[i] = reEnvVar.ReplaceAllStringFunc(lines[i], func(m string) string {
+				g := reEnvVar.FindStringSubmatch(m)
+				if v, ok := current[strings.ToLower(g[1])]; ok {
+					return strings.Replace(m, g[2], v, 1)
+				}
+				return m
+			})
+			if lines[i] != before {
+				changed++
+			}
+		}
+		// A line the scan reported as behind and the rewrite could not
+		// change is a disagreement between the two halves of this program,
+		// and the dangerous outcome is reporting success over it.
+		// Compared against the number of LINES, not of pins: two pins can
+		// sit on one line — `pkgx v0.9.0` beside `PKGM_VERSION='v0.2.2'`
+		// is a real line on this site — and counting pins here reported a
+		// disagreement that was arithmetic rather than a missed rewrite.
+		if changed != len(want) {
+			return fmt.Errorf("versioncheck: %s: %d line(s) behind but %d rewritten — "+
+				"the scan and the rewrite disagree", f, len(want), changed)
+		}
+		if err := os.WriteFile(full, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "  %s: %d line(s) rewritten\n", f, changed)
+	}
+	return nil
 }
