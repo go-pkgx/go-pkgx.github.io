@@ -104,9 +104,15 @@
   .theme-toggle:hover{border-color:var(--ghost-border-hover)}
   .btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14px;padding:11px 18px;
     border-radius:12px;border:1px solid transparent;transition:.15s}
-  .btn-primary{background:var(--grad);color:#fff;box-shadow:0 10px 24px -10px {{ $shadow | safeCSS }}}
+  {{/* ⛔ `.btn.btn-primary`, not `.btn-primary`. Further down this file sits
+       `.lm a{color:inherit}`, and `.lm a` is a class AND an element -- (0,1,1)
+       -- which BEATS a single class. So the primary button, which is an <a>,
+       took `inherit` and rendered the hero's near-black ink on its brand
+       gradient. `.band .btn-ghost` was right all along for the same reason read
+       the other way: two classes, (0,2,0), so it won and came out white. */}}
+  .btn.btn-primary{background:var(--grad);color:#fff;box-shadow:0 10px 24px -10px {{ $shadow | safeCSS }}}
   .btn-primary:hover{transform:translateY(-1px)}
-  .btn-ghost{border-color:var(--line);color:var(--ink);background:var(--surface-2)}
+  .btn.btn-ghost{border-color:var(--line);color:var(--ink);background:var(--surface-2)}
   .btn-ghost:hover{border-color:var(--ghost-border-hover)}
   /* hero */
   .hero{padding:74px 0 30px;background:
