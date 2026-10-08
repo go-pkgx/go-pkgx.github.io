@@ -5,14 +5,14 @@
 .DESCRIPTION
   Run:
 
-      $env:PKGM_VERSION='v0.2.8'; irm https://go-pkgx.github.io/install.ps1 | iex
+      $env:PKGM_VERSION='v0.2.9'; irm https://go-pkgx.github.io/install.ps1 | iex
       irm https://go-pkgx.github.io/install.ps1 | iex                 # pkgm, latest
       $env:PKGX_TOOL='pkgx'; irm https://go-pkgx.github.io/install.ps1 | iex
 
   A piped script takes no arguments, so on Windows the version is pinned with
   the environment variable above. Saved to disk, both are positional:
 
-      .\install.ps1 pkgx v0.13.0
+      .\install.ps1 pkgx v0.14.0
       .\install.ps1 pkgx latest
 
   Selects one of {pkgm, pkgx, mirror}, downloads its static <tool>.exe for your
