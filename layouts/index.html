@@ -59,12 +59,12 @@
     <div class="grid">
       <div class="card">
         <div class="ico">🐧</div><h3>Linux / macOS</h3>
-<pre><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.2.6
-curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.11.0</code></pre>
+<pre><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.2.8
+curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.12.0</code></pre>
       </div>
       <div class="card">
         <div class="ico">🪟</div><h3>Windows (PowerShell)</h3>
-<pre><code>$env:PKGM_VERSION='v0.2.6'
+<pre><code>$env:PKGM_VERSION='v0.2.8'
 irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
       </div>
       <div class="card wide">
@@ -132,7 +132,7 @@ git-scm.org — 2.55.0
       <div class="card"><div class="ico">🌳</div><h3>A node has two kinds of thing under it</h3><p><code>gnu.org</code> contains <code>gnu.org/bash</code> because of how it is <b>named</b>; <code>curl.se</code> has <code>openssl.org</code> under it because of what it <b>needs</b>. nix and guix keep the two in separate commands; here the node decides, because the person typing already knows which they named.</p></div>
       <div class="card"><div class="ico">⌨️</div><h3>The binary answers &lt;TAB&gt;</h3><p>Spack generates a completion file and commits it; guix hand-writes one per shell. Both then need a check that it still matches. Nix has the binary answer, and so does this — because what is being completed is the <b>registry</b>, which changes without the binary changing, and because there is no completion framework in an empty image.</p></div>
       <div class="card"><div class="ico">🔭</div><h3>Everything is named; what is here is marked</h3><p>A catalogue is published <b>per platform</b>: 537 of 1908 projects have no bottle for darwin/aarch64. Dropping those names would say they do not exist, which is false. Marking them says what to build next.</p></div>
-      <div class="card"><div class="ico">🖥️</div><h3>And a full-screen browser</h3><p><code>pkgx browse</code> walks it with the arrow keys, <code>/</code> searches, space pins — and <code>q</code> prints what you pinned on stdout, so <code>pkgx +$(pkgx browse)</code> composes. Without a terminal it prints the tree and exits.</p></div>
+      <div class="card"><div class="ico">🖥️</div><h3>And a full-screen browser</h3><p><code>pkgx browse</code> walks it with the arrow keys, <code>/</code> searches, space pins — and <code>q</code> prints what you pinned on stdout, so <code>pkgx +$(pkgx browse)</code> composes. <code>tab</code> cycles <b>three</b> views of the node you are standing on: what it <b>contains</b>, what it <b>needs</b>, and who <b>needs it</b>. Without a terminal it prints the tree and exits.</p></div>
       <div class="card"><div class="ico">↩️</div><h3>The two questions that do not descend</h3><p><code>ls --dependents</code> asks who <b>needs</b> this — the question before <b>changing</b> something, where every tree above answers the one before installing. <b>164</b> of 1908 projects need openssl on linux/aarch64, 854 transitively; on darwin/aarch64 it is 153 and 789, because a catalogue records what a platform really carries. <code>pkgx why A B</code> is Nix's third question: not what is in the closure but which link put it there, as a <b>shortest</b> path.</p></div>
     </div>
   </div></section>
