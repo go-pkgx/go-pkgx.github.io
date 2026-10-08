@@ -13,7 +13,7 @@
     <a class="brand" href="/"><img class="glyph" src="/img/logo.svg" width="32" height="32" alt="go-pkgx logo"> go-pkgx</a>
     <nav><a href="#install">Install</a><a href="#features">Why</a><a href="#browse">Browse</a><a href="#lock">Lock</a><a href="#modules">Modules</a><a href="#registry">Registry</a></nav>
     {{ partial "theme-toggle.html" . }}
-    <a class="btn btn-ghost" href="https://github.com/go-pkgx">GitHub</a>
+    <a class="btn btn-ghost" href="https://github.com/go-pkgx">{{ partial "icons/mark-github.html" . }}GitHub</a>
   </div></header>
 
   <div class="hero"><div class="wrap">
@@ -21,8 +21,8 @@
       <h1 class="head">No libc of its own,<br><span class="accent">so there is nowhere it cannot run.</span></h1>
       <p class="sub">The pkgx world rebuilt in pure <code>CGO_ENABLED=0</code> Go: a <b>runtime</b> that runs packages on the fly, an <b>installer</b> that mirrors the reference CLI, and the <b>bottle backend</b> they share. The reference tools shell out to pkgx + deno + curl + openssl + xz — about <b>515&nbsp;MB</b> of runtime closure. These replace all of it with single <b>~9&nbsp;MB</b> static binaries that need no libc at all, so they run on a literally empty <code>FROM scratch</code> image and materialise real packages there. BSD-3-Clause.</p>
       <div class="cta">
-        <a class="btn btn-primary" href="#install">Install in one line →</a>
-        <a class="btn btn-ghost" href="https://github.com/go-pkgx">Browse the repositories</a>
+        <a class="btn btn-primary" href="#install">{{ partial "icons/arrow-right.html" . }}Install in one line →</a>
+        <a class="btn btn-ghost" href="https://github.com/go-pkgx">{{ partial "icons/mark-github.html" . }}Browse the repositories</a>
       </div>
       {{/* ⛔ DERIVED. The sibling orgs learned this the hard way: a count typed
            beside the data it counts was right when it was typed and had no way
@@ -185,7 +185,7 @@ git-scm.org — 2.55.0
     <div class="band">
       <h2>Packaging that ships like Go.</h2>
       <p>No cgo, no interpreter, no runtime to install first. One static binary per job, a backend they share, and bottles that say where they came from.</p>
-      <a class="btn btn-ghost" href="https://github.com/go-pkgx">Read the source on GitHub →</a>
+      <a class="btn btn-ghost" href="https://github.com/go-pkgx">{{ partial "icons/mark-github.html" . }}Read the source on GitHub →</a>
     </div>
   </div></section>
 

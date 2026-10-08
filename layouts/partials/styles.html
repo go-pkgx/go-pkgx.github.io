@@ -104,6 +104,7 @@
   .theme-toggle:hover{border-color:var(--ghost-border-hover)}
   .btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14px;padding:11px 18px;
     border-radius:12px;border:1px solid transparent;transition:.15s}
+  .btn .icon{flex:none}
   {{/* ⛔ `.btn.btn-primary`, not `.btn-primary`. Further down this file sits
        `.lm a{color:inherit}`, and `.lm a` is a class AND an element -- (0,1,1)
        -- which BEATS a single class. So the primary button, which is an <a>,
