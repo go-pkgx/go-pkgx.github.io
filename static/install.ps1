@@ -5,7 +5,7 @@
 .DESCRIPTION
   Run:
 
-      $env:PKGM_VERSION='v0.2.9'; irm https://go-pkgx.github.io/install.ps1 | iex
+      $env:PKGM_VERSION='v0.2.10'; irm https://go-pkgx.github.io/install.ps1 | iex
       irm https://go-pkgx.github.io/install.ps1 | iex                 # pkgm, latest
       $env:PKGX_TOOL='pkgx'; irm https://go-pkgx.github.io/install.ps1 | iex
 
