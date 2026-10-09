@@ -1,3 +1,10 @@
+{{/* This page draws its own dark theme (prefers-color-scheme and the
+     System/Light/Dark toggle). The Dark Reader extension otherwise repaints it
+     on top -- the hero's brand wash vanished under it on go-fft while the
+     same CSS showed on go-ndarray -- so it is told to stand down, as
+     go-pdfkit's page and our Hextra fork already do. This partial is
+     included in <head>, so every landing on the kit gets the flag. */}}
+<meta name="darkreader-lock">
 {{/* The brand colours are the ONLY thing that differs between the orgs using
      this stylesheet, and they are read from [params.brand] rather than written
      in. Two byte-identical copies of this file already existed in go-authn and
