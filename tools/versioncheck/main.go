@@ -55,6 +55,30 @@ var (
 	reEnvVar     = regexp.MustCompile(`\b(PKGM|PKGX|MIRROR)_VERSION\s*=\s*'?(v\d+\.\d+\.\d+)'?`)
 )
 
+// reInstalling says whether a line is TELLING SOMEBODY TO INSTALL something,
+// as opposed to mentioning a version in passing.
+//
+// ⛔ WITHOUT THIS, -fix CAN REWRITE A HISTORICAL CLAIM INTO A FALSE ONE.
+// rePositional matches `pkgx v0.16.0` anywhere in a scanned file, and
+// layouts/index.html is prose as well as install commands. A sentence like
+// "pkgx v0.16.0 added the name index" is a statement about the past; bumping
+// its version does not keep it current, it makes it wrong — silently, and in
+// the one place a reader is most likely to trust.
+//
+// Measured on this tree the day the guard was added: all four positional
+// matches are install invocations (`| sh -s -- pkgm v0.4.1`,
+// `.\install.ps1 pkgx v0.16.0`), so anchoring costs nothing today. It is for
+// the sentence nobody has written yet — and it is what makes `-fix` safe to
+// run unattended, which is the only way this file stops going stale between
+// releases.
+//
+// The file's own comment already drew this line once, for CSS comments:
+// "A version inside a CSS comment is describing something that was once
+// measured, not telling anybody what to install". This is that rule applied
+// per LINE instead of per file, which is where prose and commands sit side by
+// side.
+var reInstalling = regexp.MustCompile(`install\.(sh|ps1)|\bsh\s+-s\s+--|\bbash\s+-s\s+--`)
+
 // scanned are the files a reader can act on. A version inside a CSS comment is
 // describing something that was once measured, not telling anybody what to
 // install, so layouts/partials is deliberately absent.
@@ -192,8 +216,14 @@ func collect(root fs.FS) ([]pin, error) {
 				return err
 			}
 			for i, line := range strings.Split(string(b), "\n") {
-				for _, m := range rePositional.FindAllStringSubmatch(line, -1) {
-					pins = append(pins, pin{p, i + 1, m[1], m[2]})
+				// The positional form only counts on a line that is
+				// installing something. See reInstalling: the env-var form
+				// needs no such test, because `PKGX_VERSION=v…` is never
+				// prose.
+				if reInstalling.MatchString(line) {
+					for _, m := range rePositional.FindAllStringSubmatch(line, -1) {
+						pins = append(pins, pin{p, i + 1, m[1], m[2]})
+					}
 				}
 				for _, m := range reEnvVar.FindAllStringSubmatch(line, -1) {
 					pins = append(pins, pin{p, i + 1, strings.ToLower(m[1]), m[2]})
@@ -332,13 +362,20 @@ func fixPins(dir string, behind []pin, current map[string]string, out io.Writer)
 				continue
 			}
 			before := lines[i]
-			lines[i] = rePositional.ReplaceAllStringFunc(lines[i], func(m string) string {
-				g := rePositional.FindStringSubmatch(m)
-				if v, ok := current[g[1]]; ok {
-					return strings.Replace(m, g[2], v, 1)
-				}
-				return m
-			})
+			// The same anchor as the scan, and not only because the scan
+			// already applied it: a line can carry an ENV-VAR pin — which
+			// needs no anchor — and positional prose beside it. Then the
+			// line is in `want` for the env var and the rewrite below would
+			// reach the prose. One predicate, both sites.
+			if reInstalling.MatchString(lines[i]) {
+				lines[i] = rePositional.ReplaceAllStringFunc(lines[i], func(m string) string {
+					g := rePositional.FindStringSubmatch(m)
+					if v, ok := current[g[1]]; ok {
+						return strings.Replace(m, g[2], v, 1)
+					}
+					return m
+				})
+			}
 			lines[i] = reEnvVar.ReplaceAllStringFunc(lines[i], func(m string) string {
 				g := reEnvVar.FindStringSubmatch(m)
 				if v, ok := current[strings.ToLower(g[1])]; ok {
