@@ -1,0 +1,27 @@
+{{/* Rules only this page uses, on top of the shared sheet that
+     github.com/go-fleettools/landingkit's styles.html provides. Included
+     after it, in its own <style> block, so the kit's sheet stays the kit's
+     (landingkit verify compares that block with the reference's). */}}
+<style>
+  /* A <pre> inside a card had NO rule — only `.term pre` was styled — so a
+     long command line did not wrap and simply ran out of the card. Two cards
+     holding a `curl … | sh -s -- pkgm v0.1.4` overflowed while the third,
+     which is prose, wrapped: the row read as three boxes of unrelated shape.
+     pre-wrap plus break-word is what keeps a command inside its box at any
+     width. */
+  .card pre{margin:10px 0 0;padding:12px 14px;border-radius:12px;overflow-x:auto;
+    background:var(--bg-soft);border:1px solid var(--line);
+    font-size:12.5px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+  .card pre code{background:none;border:0;padding:0;font-size:inherit}
+  /* A card that is a NOTE about the others rather than one more alternative.
+     Three equal columns say "pick one of three"; these are two platforms and
+     a remark that applies to both, and the layout should say that. */
+  .card.wide{grid-column:1/-1}
+  /* At 390px the page scrolled sideways by 79px: a grid item's minimum
+     width is its min-content, and the repository cards hold unbreakable
+     tokens -- `ghcr.io/go-pkgx/packages`, `<https://go-pkgx.github.io/packages/>`
+     -- so the one-column grid grew past the viewport. Letting the card shrink
+     and the token break keeps every card inside the screen. */
+  .grid>.card{min-width:0}
+  .card p{overflow-wrap:anywhere}
+</style>

@@ -49,6 +49,13 @@ jobs:
         with:
           submodules: recursive
 
+      # Hugo resolves the landingkit module (hugo.toml [module]) with the go
+      # command, at the version go.mod pins.
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v6
