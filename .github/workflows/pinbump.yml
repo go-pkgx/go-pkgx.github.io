@@ -1,0 +1,113 @@
+# Open the pull request that `versioncheck` would otherwise wait for a person
+# to write.
+#
+# WHY THIS EXISTS. The pins in the install section are deliberate: a line
+# copied today and the same line copied in six months install the same bytes.
+# That promise is only worth keeping if somebody keeps it, and nobody did —
+# `versioncheck` was RED ON MAIN EVERY DAY from 2026-10-09 to 2026-10-17, five
+# scheduled runs in a row, because pkgx released v0.17.0 and then v0.17.1 and
+# the two pinned lines did not move. A check that fails daily and is fixed by
+# hand teaches people to ignore it.
+#
+# ⛔ IT ADDS NO SECOND DEFINITION OF WHERE A PIN IS. `versioncheck -fix`
+# already rewrites them, reusing the SAME regexps the scan uses, and it
+# already knows which `v0.16` is a pin and which is a sentence about history
+# ("since v0.16.0 it reads a 38 KB name index" must not move). A Renovate
+# customManager would be a second list of those places, in a second syntax,
+# and the day the two disagree the regex bumps a line the checker does not
+# read — or misses one it does. This workflow only RUNS what is already here.
+name: bump the pins the checker finds behind
+
+on:
+  schedule:
+    # Half an hour after versioncheck's 06:17, so the red run and the pull
+    # request that answers it are next to each other in the log rather than a
+    # day apart.
+    - cron: '47 6 * * *'
+  workflow_dispatch:
+
+# ⛔ THE ONE THING THIS FILE ASKS FOR THAT NOTHING ELSE HERE DOES. Every other
+# workflow in this repository runs with `contents: read`. Opening a pull
+# request needs to push a branch and create the request, and that is a real
+# grant in a public repository — it is scoped to this workflow, and this
+# workflow runs one Go program and `gh pr create`.
+#
+# It never writes to the default branch. The hook in front of git refuses that
+# anyway; saying so here is so the next reader does not have to go and check.
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  # One at a time, and no queue. A second run while the first is open would
+  # race on the same branch name for an identical change.
+  group: pinbump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          # Pinned for the same reason versioncheck.yml pins it: an unpinned
+          # toolchain changes the compiler under the repository with no commit
+          # to point at.
+          go-version: '1.27.2'
+
+      # ⛔ THE VERIFICATION LIVES HERE, NOT ON THE PULL REQUEST.
+      #
+      # `-fix` rewrites, then runs the ORIGINAL check against the tree it just
+      # wrote and fails if anything is still behind — so if this step is green
+      # the rewrite is proved. That placement is deliberate: a pull request
+      # opened with the default GITHUB_TOKEN does not trigger other workflows,
+      # by design, to stop a workflow from starting itself. So `versioncheck`
+      # will NOT run on the request this opens, and nobody should read its
+      # absence as a pass. Main's own run turns green when it merges.
+      - name: rewrite the stale pins, and prove it
+        working-directory: tools/versioncheck
+        env:
+          # Same reason as versioncheck.yml: anonymous is 60 an hour per IP,
+          # shared, and a 403 prints where the list of stale pins goes.
+          GITHUB_TOKEN: ${{ github.token }}
+        run: go run . -fix
+
+      - name: open the pull request, if anything moved
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          if git diff --quiet; then
+            echo "nothing behind — no pull request to open"
+            exit 0
+          fi
+          echo "changed:"
+          git diff --stat
+
+          branch="pinbump/$(date -u +%Y-%m-%d)"
+          # Already open from an earlier run today, or from a run whose
+          # request is still unmerged: leave it alone. Opening a second one
+          # for the same change is how a bot becomes noise.
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "$branch already exists — leaving the open request alone"
+            exit 0
+          fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          # One -m per paragraph, each on a single YAML line. A multi-line
+          # string written flush against the left margin ends the block scalar
+          # it sits in and actionlint refuses the file; an indented heredoc
+          # would carry its own indentation into the message. No backticks
+          # either: inside a double-quoted shell string they substitute.
+          git commit -aq \
+            -m "site: the pinned versions follow their releases" \
+            -m "Written by versioncheck -fix, which rewrites only the lines its own scan reports as pins, and then re-runs the check against what it wrote. The job that opened this was green on that second check." \
+            -m "versioncheck does NOT run on this request: a pull request opened with the default GITHUB_TOKEN does not trigger workflows. The proof is the job that opened it, and main's own run once this merges."
+          git push -q origin "$branch"
+          gh pr create \
+            --base main --head "$branch" \
+            --title "site: the pinned versions follow their releases" \
+            --body "\`versioncheck\` found pins behind their releases and \`-fix\` rewrote them. See the run that opened this for the check that ran *after* the rewrite — this request carries no check of its own, because a pull request opened with the default token does not trigger workflows."
