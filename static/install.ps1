@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  go-pkgx installer for Windows — the pure-Go pkgx family (pkgm, pkgx, mirror).
+  go-pkgx installer for Windows — the pure-Go pkgx family (pkgm, pkgx, pkgs, mirror).
 
 .DESCRIPTION
   Run:
@@ -15,7 +15,7 @@
       .\install.ps1 pkgx v0.21.0
       .\install.ps1 pkgx latest
 
-  Selects one of {pkgm, pkgx, mirror}, downloads its static <tool>.exe for your
+  Selects one of {pkgm, pkgx, pkgs, mirror}, downloads its static <tool>.exe for your
   architecture from a GitHub release, verifies it against the release
   SHA256SUMS, installs it to $env:LOCALAPPDATA\Programs\go-pkgx, and adds that
   directory to the user PATH. Idempotent: re-running is the updater — it
@@ -51,12 +51,16 @@ if (-not $Tool) {
   elseif ($env:TOOL)   { $Tool = $env:TOOL }
   else                 { $Tool = 'pkgm' }
 }
-if ($Tool -notin @('pkgm', 'pkgx', 'mirror')) {
-  Write-Error "go-pkgx-install: unknown tool '$Tool' (choose one of: pkgm, pkgx, mirror)"
+if ($Tool -notin @('pkgm', 'pkgx', 'pkgs', 'mirror')) {
+  Write-Error "go-pkgx-install: unknown tool '$Tool' (choose one of: pkgm, pkgx, pkgs, mirror)"
   exit 1
 }
 $toolUpper = $Tool.ToUpper()
-$repo = "go-pkgx/$Tool"
+# The repository is not always the tool's name: pkgs ships from go-pkgx/pkgx,
+# because it is the other half of the same program. Deriving it from the name
+# alone would 404 on a release that does not exist, and read as "there is no
+# such version" rather than "that is not where it lives".
+$repo = if ($Tool -eq 'pkgs') { 'go-pkgx/pkgx' } else { "go-pkgx/$Tool" }
 
 function Fail([string]$msg) {
   Write-Error "${Tool}-install: $msg"
@@ -183,6 +187,12 @@ try {
     'pkgx' {
       Write-Host 'Done. Next:  pkgx node@22 --version'
       Write-Host '(runs packages on the fly; verifies against the signed registry by default)'
+      Write-Host "To ask ABOUT packages, install its other half: `$env:PKGX_TOOL='pkgs'"
+    }
+    'pkgs' {
+      Write-Host 'Done. Next:  pkgs catalog update  then  pkgs search rg'
+      Write-Host '(answers about packages - ls, search, why, store, browse, env)'
+      Write-Host "To RUN one, install its other half: `$env:PKGX_TOOL='pkgx'"
     }
     'mirror' {
       Write-Host 'Done. Next:  mirror agwa.name/git-crypt --dest ./m'

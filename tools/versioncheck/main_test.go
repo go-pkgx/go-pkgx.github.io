@@ -208,3 +208,50 @@ func TestNoTokenMeansNoHeader(t *testing.T) {
 		t.Errorf("Authorization header sent with no token: %q", seen)
 	}
 }
+
+// ⛔ `pkgs` SHIPS FROM go-pkgx/pkgx, AND BOTH HALVES OF THAT MATTER.
+//
+// The loud half: asking GitHub for /repos/go-pkgx/pkgs would 404, and this
+// tool would report the site stale against a release that does not exist.
+//
+// The quiet half, and the worse one: a `pkgs v0.22.1` install line that no
+// pattern matches is a pin NOTHING TRACKS. It is never reported behind,
+// which is indistinguishable from being current — and this tool exists
+// because exactly that happened for eight days.
+func TestPkgsIsTrackedAndAsksThePkgxRepository(t *testing.T) {
+	if got := repoOf("pkgs"); got != "pkgx" {
+		t.Errorf("repoOf(pkgs) = %q, want pkgx", got)
+	}
+	for _, tool := range []string{"pkgm", "pkgx", "mirror"} {
+		if got := repoOf(tool); got != tool {
+			t.Errorf("repoOf(%s) = %q, want itself", tool, got)
+		}
+	}
+
+	// The request really goes to the pkgx repository.
+	var asked string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		asked = r.URL.Path
+		_, _ = w.Write([]byte(`{"tag_name":"v9.9.9"}`))
+	}))
+	defer srv.Close()
+	old := apiBase
+	apiBase = srv.URL
+	defer func() { apiBase = old }()
+	if _, err := latestRelease("pkgs"); err != nil {
+		t.Fatal(err)
+	}
+	if asked != "/repos/go-pkgx/pkgx/releases/latest" {
+		t.Errorf("latestRelease(pkgs) asked %q", asked)
+	}
+
+	// And the scan SEES a pkgs pin, in both shapes the site uses.
+	for _, line := range []string{
+		`curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgs v0.22.1`,
+		`$env:PKGS_VERSION='v0.22.1'`,
+	} {
+		if !rePositional.MatchString(line) && !reEnvVar.MatchString(line) {
+			t.Errorf("no pattern matches %q — that pin would never be checked", line)
+		}
+	}
+}
