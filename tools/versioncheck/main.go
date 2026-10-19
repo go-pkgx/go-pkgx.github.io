@@ -51,9 +51,30 @@ type pin struct {
 // takes, and the environment variable PowerShell needs because a piped script
 // gets no arguments.
 var (
-	rePositional = regexp.MustCompile(`\b(pkgm|pkgx|mirror)\s+(v\d+\.\d+\.\d+)\b`)
-	reEnvVar     = regexp.MustCompile(`\b(PKGM|PKGX|MIRROR)_VERSION\s*=\s*'?(v\d+\.\d+\.\d+)'?`)
+	rePositional = regexp.MustCompile(`\b(pkgm|pkgx|pkgs|mirror)\s+(v\d+\.\d+\.\d+)\b`)
+	reEnvVar     = regexp.MustCompile(`\b(PKGM|PKGX|PKGS|MIRROR)_VERSION\s*=\s*'?(v\d+\.\d+\.\d+)'?`)
 )
+
+// repoOf is the repository a tool's releases come from.
+//
+// ⛔ IT IS NOT ALWAYS THE TOOL'S NAME, and getting that wrong fails in the
+// quieter of the two directions. `pkgs` ships from go-pkgx/pkgx — it is the
+// other half of the same program — so asking GitHub for
+// /repos/go-pkgx/pkgs/releases/latest would 404 and this check would call
+// the site stale about a release that does not exist.
+//
+// The other direction is worse and is why `pkgs` had to be added to the
+// expressions above at the same time: a `pkgs v0.22.1` line that no pattern
+// matches is a pinned install command NOTHING TRACKS. It would simply never
+// be reported behind, which is indistinguishable from being current — and
+// this whole tool exists because a pin that nobody watched sat eight days
+// out of date.
+func repoOf(tool string) string {
+	if tool == "pkgs" {
+		return "pkgx"
+	}
+	return tool
+}
 
 // reInstalling says whether a line is TELLING SOMEBODY TO INSTALL something,
 // as opposed to mentioning a version in passing.
@@ -253,7 +274,7 @@ var apiBase = "https://api.github.com"
 // including in the errors below.
 func latestRelease(tool string) (string, error) {
 	c := &http.Client{Timeout: 30 * time.Second}
-	req, err := http.NewRequest(http.MethodGet, apiBase+"/repos/go-pkgx/"+tool+"/releases/latest", nil)
+	req, err := http.NewRequest(http.MethodGet, apiBase+"/repos/go-pkgx/"+repoOf(tool)+"/releases/latest", nil)
 	if err != nil {
 		return "", err
 	}

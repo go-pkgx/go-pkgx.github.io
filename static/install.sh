@@ -1,19 +1,24 @@
 #!/bin/sh
-# go-pkgx installer — the pure-Go pkgx family (pkgm, pkgx, mirror).
+# go-pkgx installer — the pure-Go pkgx family (pkgm, pkgx, pkgs, mirror).
 #
 #   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.5.0
 #   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm latest
 #   curl -fsSL https://go-pkgx.github.io/install.sh | sh            # pkgm, latest
 #   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx # another tool
 #
-# Selects one of {pkgm, pkgx, mirror}, downloads its static, dependency-free
+# Selects one of {pkgm, pkgx, pkgs, mirror}, downloads its static, dependency-free
 # binary for your os/arch from a GitHub release, verifies it against the release
 # SHA256SUMS, and installs it. Idempotent: re-running is the updater — it
 # resolves the target version and skips the download if that version is already
 # installed (so `curl … | sh` on a cron is a safe self-update).
 #
 # Tool selection (default: pkgm, so the bare one-liner is unchanged):
-#   sh -s -- <tool>   positional argument (pkgm | pkgx | mirror)
+#   sh -s -- <tool>   positional argument (pkgm | pkgx | pkgs | mirror)
+#
+# pkgx and pkgs are the two halves of one program and ship from ONE release:
+# pkgx RUNS a package, pkgs ANSWERS about one (ls, search, why, catalog,
+# store, browse, compat, env, completion). Install both, or pkgs's verbs
+# have nowhere to go.
 #   PKGX_TOOL=<tool>  environment variable (or TOOL=<tool>)
 #
 # Version selection (second positional argument, or the env knob below):
@@ -44,12 +49,22 @@ set -eu
 # --- select the tool ---------------------------------------------------------
 tool="${1:-${PKGX_TOOL:-${TOOL:-pkgm}}}"
 case "$tool" in
-  pkgm|pkgx|mirror) ;;
-  *) printf 'go-pkgx-install: unknown tool %s (choose one of: pkgm, pkgx, mirror)\n' "'$tool'" >&2; exit 1 ;;
+  pkgm|pkgx|pkgs|mirror) ;;
+  *) printf 'go-pkgx-install: unknown tool %s (choose one of: pkgm, pkgx, pkgs, mirror)\n' "'$tool'" >&2; exit 1 ;;
 esac
 tool_upper=$(printf '%s' "$tool" | tr '[:lower:]' '[:upper:]')
 
-REPO="go-pkgx/${tool}"
+# ⛔ THE REPOSITORY IS NOT ALWAYS THE TOOL'S NAME. Three of the four are
+# their own repository; `pkgs` ships from go-pkgx/pkgx, because it is the
+# other half of the same program — pkgx runs packages, pkgs answers about
+# them, and they share one resolver. Deriving the repo from the tool name
+# alone would have fetched from go-pkgx/pkgs, which does not exist, and the
+# failure a user would see is a 404 on a release rather than "that is not
+# where it lives".
+case "$tool" in
+  pkgs) REPO="go-pkgx/pkgx" ;;
+  *)    REPO="go-pkgx/${tool}" ;;
+esac
 
 err() { printf '%s-install: %s\n' "$tool" "$1" >&2; exit 1; }
 
@@ -187,6 +202,12 @@ case "$tool" in
   pkgx)
     printf '\nDone. Next:  pkgx node@22 --version\n' >&2
     printf '(runs packages on the fly; verifies against the signed registry by default)\n' >&2
+    printf 'To ask ABOUT packages, install its other half:  … | sh -s -- pkgs\n' >&2
+    ;;
+  pkgs)
+    printf '\nDone. Next:  pkgs catalog update  &&  pkgs search rg\n' >&2
+    printf '(answers about packages — ls, search, why, store, browse, env)\n' >&2
+    printf 'To RUN one, install its other half:  … | sh -s -- pkgx\n' >&2
     ;;
   mirror)
     printf '\nDone. Next:  mirror agwa.name/git-crypt --dest ./m\n' >&2

@@ -56,11 +56,13 @@
     <span class="eyebrow">Install</span>
     <h2>One line, and it names a version on purpose.</h2>
     <p class="lead">It downloads the static binary for your os/arch from a named GitHub release, verifies it against that release's <code>SHA256SUMS</code>, and puts it on your <code>PATH</code>. A line copied today and the same line copied in six months install the same bytes — and a bad release does not reach everyone who happens to install that hour.</p>
+    <p class="lead"><code>pkgm</code> <b>installs</b>, <code>pkgx</code> <b>runs</b> without installing, and <code>pkgs</code> <b>answers about</b> packages — <code>ls</code>, <code>search</code>, <code>why</code>, <code>catalog</code>, <code>store</code>, <code>browse</code>. The last two ship from one release: the word after <code>pkgx</code> is a <b>package</b>, as it is upstream, so <code>pkgx ls</code> runs GNU ls and the verbs needed a command of their own.</p>
     <div class="grid">
       <div class="card">
         <div class="ico">🐧</div><h3>Linux / macOS</h3>
 <pre><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.5.0
-curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.21.0</code></pre>
+curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.22.1
+curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgs v0.22.1</code></pre>
       </div>
       <div class="card">
         <div class="ico">🪟</div><h3>Windows (PowerShell)</h3>
