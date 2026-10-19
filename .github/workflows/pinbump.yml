@@ -86,12 +86,27 @@ jobs:
           git diff --stat
 
           branch="pinbump/$(date -u +%Y-%m-%d)"
-          # Already open from an earlier run today, or from a run whose
-          # request is still unmerged: leave it alone. Opening a second one
-          # for the same change is how a bot becomes noise.
-          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
-            echo "$branch already exists — leaving the open request alone"
+
+          # ⛔ ASK FOR AN OPEN PULL REQUEST, NOT FOR A BRANCH.
+          #
+          # This read `git ls-remote --heads`, and a branch is not a request.
+          # Measured on the first run that had anything to bump, 2026-10-19:
+          # the push SUCCEEDED and `gh pr create` was refused, leaving
+          # pinbump/2026-10-19 on the remote with no request attached. Every
+          # later run would then have found that branch, said "leaving the
+          # open request alone", and exited 0 — daily, for ever, about a
+          # request that does not exist. A bot that goes quiet is worse than
+          # one that is noisy, and this one exists because a pin nobody
+          # watched sat eight days out of date.
+          open=$(gh pr list --state open --head "$branch" --json number --jq 'length')
+          if [ "$open" != "0" ]; then
+            echo "a request is already open for $branch — leaving it alone"
             exit 0
+          fi
+          # The branch may still be there from a run that pushed and could
+          # not open: reuse it rather than failing on a non-fast-forward.
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "$branch exists with no open request — replacing it"
           fi
 
           git config user.name  "github-actions[bot]"
@@ -106,8 +121,18 @@ jobs:
             -m "site: the pinned versions follow their releases" \
             -m "Written by versioncheck -fix, which rewrites only the lines its own scan reports as pins, and then re-runs the check against what it wrote. The job that opened this was green on that second check." \
             -m "versioncheck does NOT run on this request: a pull request opened with the default GITHUB_TOKEN does not trigger workflows. The proof is the job that opened it, and main's own run once this merges."
-          git push -q origin "$branch"
-          gh pr create \
+          git push -qf origin "$branch"
+          # ⛔ THE REFUSAL HAS TO NAME THE SETTING, or the next reader sees a
+          # red bot and a GraphQL sentence. "Allow GitHub Actions to create
+          # and approve pull requests" is OFF by default for an organisation,
+          # and `permissions: pull-requests: write` above is necessary but
+          # NOT sufficient — which is exactly the pair of facts a person
+          # needs and neither error message carries.
+          if ! gh pr create \
             --base main --head "$branch" \
             --title "site: the pinned versions follow their releases" \
             --body "\`versioncheck\` found pins behind their releases and \`-fix\` rewrote them. See the run that opened this for the check that ran *after* the rewrite — this request carries no check of its own, because a pull request opened with the default token does not trigger workflows."
+          then
+            echo "::error::could not open the pull request. The branch $branch IS pushed and the rewrite is proved; what is missing is a repository setting: Settings → Actions → General → Workflow permissions → 'Allow GitHub Actions to create and approve pull requests'. Until it is on, open the request by hand from that branch."
+            exit 1
+          fi
