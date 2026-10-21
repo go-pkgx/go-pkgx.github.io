@@ -54,7 +54,7 @@ jobs:
           # Pinned for the same reason versioncheck.yml pins it: an unpinned
           # toolchain changes the compiler under the repository with no commit
           # to point at.
-          go-version: '1.27.2'
+          go-version: '1.27.3'
 
       # ⛔ THE VERIFICATION LIVES HERE, NOT ON THE PULL REQUEST.
       #

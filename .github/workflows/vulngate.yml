@@ -50,7 +50,7 @@ jobs:
         with:
           # Pinned, not `stable`. An unpinned toolchain changes the compiler
           # under the repository with no commit to point at.
-          go-version: '1.27.2'
+          go-version: '1.27.3'
       # ⛔ NO `set -o pipefail` and no bare exit status: govulncheck exits
       # non-zero over findings it has decided are NOT called, and zero over
       # some it has, which is the whole reason vulngate exists. The emptiness
