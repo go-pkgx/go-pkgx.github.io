@@ -68,14 +68,14 @@ disableKinds = ["taxonomy", "term", "RSS", "sitemap", "404"]
   pkg = "github.com/go-pkgx/bk"
   url = "https://github.com/go-pkgx/bk"
   status = "ready"
-  blurb = "**The build tool**, a from-scratch `CGO_ENABLED=0` reimplementation of pkgx's brewkit — which was Deno/TypeScript with Ruby and `patchelf` helpers. It reads a pantry `package.yml`, builds in a pkgx environment, relocates the install tree and packages a bottle. The reference tool is *native*: everything pivots on the host being the thing it builds for. Here **Target is not Host by design**, so the target platform is a first-class value and a **Windows PE bottle built on a Linux or macOS host** is a supported path rather than a retrofit."
+  blurb = "**The build tool**, a from-scratch `CGO_ENABLED=0` reimplementation of pkgx's brewkit — which was Deno/TypeScript with Ruby and `patchelf` helpers. It reads a pantry `package.yml`, builds in a pkgx environment, relocates the install tree and packages a bottle. The reference tool is *native*: everything pivots on the host being the thing it builds for. Here **Target is not Host by design**, so the target platform is a first-class value and a **Windows PE bottle built on a Linux or macOS host** is a supported path rather than a retrofit, and so is a pure-Go **`wasip1/wasm` module** (target triple `wasm32-wasip1`, no C toolchain, no POSIX relocation)."
 
 [[params.repos]]
   name = "packages"
   pkg = "github.com/go-pkgx/packages"
   url = "https://github.com/go-pkgx/packages"
   status = "ready"
-  blurb = "**The factory.** It runs `bk` over the pkgx pantry and publishes to `ghcr.io/go-pkgx/packages`, each package an OCI artifact carrying a CycloneDX SBOM and an in-toto SLSA provenance statement as OCI referrers. Measured from the published `registry.json` on 2026-09-26: **1 584 projects, 42 530 bottles** across linux/aarch64 (15 135), linux/x86-64 (13 253), darwin/x86-64 (7 029), darwin/aarch64 (6 559) and windows/x86-64 (554). It is a moving target, so re-measure rather than trust this line."
+  blurb = "**The factory.** It runs `bk` over the pkgx pantry and publishes to `ghcr.io/go-pkgx/packages`, each package an OCI artifact carrying a CycloneDX SBOM and an in-toto SLSA provenance statement as OCI referrers. Measured from the published `registry.json` on 2026-09-26: **1 584 projects, 42 530 bottles** across linux/aarch64 (15 135), linux/x86-64 (13 253), darwin/x86-64 (7 029), darwin/aarch64 (6 559) and windows/x86-64 (554). It is a moving target, so re-measure rather than trust this line. A pilot **`wasip1/wasm`** lane (`wasip1.yml`) publishes pure-Go modules — `age`, `go-md2man`, `shfmt` so far, each run under wasmtime before publishing — under the OCI platform `os=wasip1, architecture=wasm`, for an in-browser container engine."
 
 [[params.repos]]
   name = "pantry-overlay"
