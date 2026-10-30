@@ -10,6 +10,12 @@
 # would rot the same way, which is why `wasmstage -derive` asks the published
 # catalogue instead of reading a list out of this file.
 #
+# ⛔ THE DERIVATION IS CONFRONTED, NOT JUST PARSED. A derivation that returns
+# a SUBSET of what exists is indistinguishable from a small catalogue, and no
+# test written against a fixture can tell them apart. The `confront` job below
+# compares the derived list against the factory's own lane files in
+# go-pkgx/packages. See tools/wasmstage/confront_test.go.
+#
 # ⛔ SILENCE IS NOT GREEN. GitHub disables a `schedule` trigger after 60 days
 # with no activity in the repository, and says so only in a one-off email to
 # the owner. So "the playground has not gone stale, there have been no red
@@ -82,6 +88,37 @@ jobs:
       - name: test
         working-directory: tools/wasmstage
         run: go test ./...
+
+  # ⛔ CONFRONT THE DERIVATION WITH THE FACTORY, AND DO NOT GATE ON IT.
+  #
+  # Every other test drives `-derive` against a catalogue the test itself
+  # wrote, so none of them can tell a correct derivation from one that
+  # silently returns a subset: six of seven projects yields a valid manifest,
+  # a page that renders and nothing red. This job asks go-pkgx/packages what
+  # its wasip1 lanes actually build (the matrix entries of wasip1.yml and
+  # wasip1-c.yml) and compares.
+  #
+  # It is a JOB OF ITS OWN, on purpose. The two sides can disagree benignly —
+  # a lane gains a project between two weekly catalogue runs — and making the
+  # refresh depend on that would freeze the playground for a week over a
+  # difference that fixes itself. A failure here turns the whole run red and
+  # mails the owner, which is the signal; the modules still refresh.
+  confront:
+    name: the catalogue agrees with the factory that builds the bottles
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.3'
+      - name: derived vs declared
+        working-directory: tools/wasmstage
+        # Reaches the registry and raw.githubusercontent.com, which is why it
+        # is opt-in and why it is not in the `check` job above.
+        env:
+          WASMSTAGE_CONFRONT: '1'
+        run: go test -v -run TestTheDerivedListMatchesWhatTheFactoryBuilds ./...
 
   stage:
     name: stage the modules and build the site around them
