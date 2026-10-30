@@ -2,7 +2,10 @@ module github.com/go-pkgx/go-pkgx.github.io/tools/wasmstage
 
 go 1.27.3
 
-require github.com/go-pkgx/bottle v0.60.0
+require (
+	github.com/go-pkgx/bottle v0.60.0
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
 	github.com/agext/levenshtein v1.2.1 // indirect
@@ -22,6 +25,5 @@ require (
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	oras.land/oras-go/v2 v2.7.0 // indirect
 )
