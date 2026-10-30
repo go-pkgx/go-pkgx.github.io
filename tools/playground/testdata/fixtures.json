@@ -1,0 +1,130 @@
+{
+  "_comment": "Recorded from wasmtime, the reference implementation, by `go test ./tools/playground -update` with PLAYGROUND_WASM_DIR pointing at a tools/wasmstage tree. The arguments are the ones go-pkgx/packages runs before it publishes a bottle (wasip1.yml, wasip1-c.yml); argv[0] is pinned to the binary's name so a fixture cannot embed the machine it was recorded on. A sha256 that no longer matches says the MODULE moved, not the behaviour.",
+  "recorded": "2026-10-30T20:58:27Z",
+  "wasmtime": "wasmtime 50.0.1 (c307ec81d 2026-10-29)",
+  "guest_cwd": "/smoke",
+  "cases": [
+    {
+      "name": "age",
+      "project": "filippo.io/age",
+      "version": "1.3.2",
+      "bin": "age",
+      "module": "filippo.io/age/age.wasm",
+      "sha256": "c37e5ae0ed71bd5fc14100a01707d2f98b9108d1c74122fc439f33f60fbb8309",
+      "args": [
+        "--version"
+      ],
+      "want_exit": 0,
+      "want_stdout": "djEuMy4yCg==",
+      "want_stderr": ""
+    },
+    {
+      "name": "go-md2man",
+      "project": "github.com/cpuguy83/go-md2man",
+      "version": "2.0.7",
+      "bin": "go-md2man",
+      "module": "github.com/cpuguy83/go-md2man/go-md2man.wasm",
+      "sha256": "ccd74a1a3f57bc725fd839f2ceb478194dbc28492c9a4c422185db6e14c16e75",
+      "args": [
+        "-in",
+        "t.md"
+      ],
+      "files": {
+        "t.md": "IyBUaXRsZQoKYm9keQo="
+      },
+      "want_exit": 0,
+      "want_stdout": "Lm5oCi5USCBUaXRsZQpib2R5Cg==",
+      "want_stderr": ""
+    },
+    {
+      "name": "shfmt",
+      "project": "mvdan.cc/sh",
+      "version": "3.14.1",
+      "bin": "shfmt",
+      "module": "mvdan.cc/sh/shfmt.wasm",
+      "sha256": "e215314468ea020eb1ad1fb8da79d9ca184949d6eb85188627373f9e2009b6ba",
+      "args": [
+        "--version"
+      ],
+      "want_exit": 0,
+      "want_stdout": "djMuMTQuMQo=",
+      "want_stderr": ""
+    },
+    {
+      "name": "lua",
+      "project": "lua.org",
+      "version": "5.4.9",
+      "bin": "lua",
+      "module": "lua.org/lua.wasm",
+      "sha256": "11822bea4abf3e5fa59dcf2492d976daa3bbf66f5b9258265b6ec0d531af8e56",
+      "args": [
+        "-e",
+        "assert(not pcall(error, 1)); assert(_VERSION == [[Lua 5.4]])"
+      ],
+      "want_exit": 0,
+      "want_stdout": "",
+      "want_stderr": ""
+    },
+    {
+      "name": "luac",
+      "project": "lua.org",
+      "version": "5.4.9",
+      "bin": "luac",
+      "module": "lua.org/luac.wasm",
+      "sha256": "157857b0888bc7823aef0c6f764fbe605ad516c7d18a49f313b839ba0cbe57ea",
+      "args": [
+        "-v"
+      ],
+      "want_exit": 0,
+      "want_stdout": "THVhIDUuNC45ICBDb3B5cmlnaHQgKEMpIDE5OTQtMjAyNiBMdWEub3JnLCBQVUMtUmlvCg==",
+      "want_stderr": ""
+    },
+    {
+      "name": "sqlite3",
+      "project": "sqlite.org",
+      "version": "3.53.4",
+      "bin": "sqlite3",
+      "module": "sqlite.org/sqlite3.wasm",
+      "sha256": "dfbe8e3616e5636858a081ac994c1b8291672ed09f0e798263e9f4a2daf11309",
+      "args": [
+        ":memory:",
+        "select sqlite_version();"
+      ],
+      "want_exit": 0,
+      "want_stdout": "My41My40Cg==",
+      "want_stderr": "LS0gd2FybmluZzogY2Fubm90IGZpbmQgaG9tZSBkaXJlY3Rvcnk7IGNhbm5vdCByZWFkIH4vLnNxbGl0ZXJjCg=="
+    },
+    {
+      "name": "minigzip",
+      "project": "zlib.net",
+      "version": "1.3.2",
+      "bin": "minigzip",
+      "module": "zlib.net/minigzip.wasm",
+      "sha256": "9c2f47a23c301fce2ce3007af0de60e94027b72a2984e7301ddbdd56943d4303",
+      "args": [],
+      "files": {
+        "t.txt": "aGVsbG8gd2FzaXAxCg=="
+      },
+      "stdin": "aGVsbG8gd2FzaXAxCg==",
+      "want_exit": 0,
+      "want_stdout": "H4sIAAAAAAAAA8tIzcnJVyhPLM4sMOQCALsOjmANAAAA",
+      "want_stderr": ""
+    },
+    {
+      "name": "simdjson-minify",
+      "project": "github.com/simdjson/simdjson",
+      "version": "5.0.5",
+      "bin": "simdjson-minify",
+      "module": "github.com/simdjson/simdjson/simdjson-minify.wasm",
+      "sha256": "87e24e8900934d815694ad6ddb90bef076c676c5f75e504e7580f85c6bf814e5",
+      "args": [],
+      "files": {
+        "j.json": "eyAiYSIgOiBbMSwgMiBdIH0K"
+      },
+      "stdin": "eyAiYSIgOiBbMSwgMiBdIH0K",
+      "want_exit": 0,
+      "want_stdout": "eyJhIjpbMSwyXX0K",
+      "want_stderr": "aW1wbGVtZW50YXRpb246IGZhbGxiYWNrCg=="
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+# Confront the playground's WASI shim with wasmtime.
+#
+# ⛔ THE PAGE BUILDING IS NOT EVIDENCE THE SHIM WORKS. A WASI host can write a
+# struct field at the wrong offset, return the wrong errno, or answer "success"
+# to a call it never implemented, and the page will render perfectly while the
+# module prints bytes nobody can check. The only thing that separates a working
+# shim from a convincing one is a second implementation answering the same
+# questions — so this runs all eight published modules under wasmtime, the
+# reference, and requires static/playground/wasi.js to produce the same stdout,
+# the same stderr and the same exit status.
+#
+# It is a FILE OF ITS OWN on purpose: tools/wasmstage and the staging step
+# belong to another change, and a new file cannot conflict with an edit to an
+# existing one.
+
+name: Playground shim vs wasmtime
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  confront:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: bytecodealliance/actions/wasmtime/setup@v1
+
+      # Needs no modules and no registry: the fixture file is well formed, the
+      # page's scripts parse, the page's default command lines ARE the ones the
+      # fixtures were recorded from, and — the control — a syscall the shim
+      # does not implement is still visible to the guest and named in the
+      # diagnostics. Without that last one, "no diagnostics" would be
+      # indistinguishable from a diagnostic channel that does not work.
+      - name: the checks that need nothing staged
+        working-directory: tools/playground
+        run: go test -v ./...
+
+      # tools/wasmstage lands in its own pull request. Until it is on main,
+      # this step is absent rather than failing: a red check for a file that
+      # belongs to somebody else's change tells nobody anything.
+      - name: stage the modules from ghcr.io
+        if: hashFiles('tools/wasmstage/main.go') != ''
+        working-directory: tools/wasmstage
+        run: |
+          go run . -out "$RUNNER_TEMP/staged" \
+            zlib.net lua.org sqlite.org filippo.io/age mvdan.cc/sh \
+            github.com/cpuguy83/go-md2man github.com/simdjson/simdjson
+
+      # ⛔ The confrontation itself. `-run` names both halves so a typo in a
+      # test name shows up as "no tests to run" rather than as a pass.
+      - name: wasmtime, then the shim, on the same eight modules
+        if: hashFiles('tools/wasmstage/main.go') != ''
+        working-directory: tools/playground
+        env:
+          PLAYGROUND_WASM_DIR: ${{ runner.temp }}/staged
+        run: go test -v -run 'TestWasmtimeMatchesFixtures|TestShimMatchesWasmtime' ./...

@@ -12,7 +12,9 @@
 <body class="lm">
   <header class="nav"><div class="wrap">
     <a class="brand" href="/"><img class="glyph" src="/img/logo.svg" width="32" height="32" alt="go-pkgx logo"> go-pkgx</a>
-    <nav><a href="#install">Install</a><a href="#features">Why</a><a href="#browse">Browse</a><a href="#lock">Lock</a><a href="#modules">Modules</a><a href="#registry">Registry</a></nav>
+    {{/* /playground/ is a page, not an anchor: a page nobody can reach from
+         here is a page nobody reaches. */}}
+    <nav><a href="#install">Install</a><a href="#features">Why</a><a href="#browse">Browse</a><a href="#lock">Lock</a><a href="#modules">Modules</a><a href="#registry">Registry</a><a href="{{ "playground/" | relURL }}">Playground</a></nav>
     {{ partial "theme-toggle.html" . }}
   </div></header>
   {{ partial "fork-ribbon.html" "https://github.com/go-pkgx/pkgx" }}

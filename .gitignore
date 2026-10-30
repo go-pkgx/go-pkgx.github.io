@@ -19,3 +19,16 @@ tools/*/*
 !tools/*/go.sum
 !tools/*/testdata/
 !tools/*/README.md
+
+# The playground's modules are STAGED, never committed. `tools/wasmstage`
+# writes them here during the build; the smallest is 104 KB and the largest
+# 8 MB, and they move every time the factory republishes.
+#
+# This is a safety net, not the barrier. The barrier is that nothing in the
+# repository writes into this directory: the only thing that does is a CI step,
+# into a checkout that is thrown away. Verify both ways:
+#
+#     git check-ignore -v static/playground/modules/lua.org/lua.wasm  # ignored
+#     git check-ignore -v static/playground/wasi.js                   # nothing
+#
+static/playground/modules/

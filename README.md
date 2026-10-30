@@ -8,6 +8,39 @@ design system, `layouts/partials/theme-toggle.html` for the three-way theme
 toggle (system / light / dark, defaulting to system), and a `layouts/index.html`
 whose repo cards are drawn from `[[params.repos]]` in `hugo.toml`.
 
+## The playground, at `/playground/`
+
+`content/playground.md` + `layouts/_default/playground.html` + `static/playground/`
+run the factory's `wasip1/wasm` bottles **in the reader's browser**: `wasi.js` is a
+WASI preview1 host, `presets.js` holds one proven command line per module, and
+`app.js` is the page.
+
+Three things about it are load-bearing:
+
+- **It never fetches a registry.** `ghcr.io` sends no CORS headers, so the modules are
+  staged into `static/playground/modules/` during the build by `tools/wasmstage`, and
+  the page reads `index.json` from this site. **No `.wasm` is committed**; `.gitignore`
+  keeps the staged tree out.
+- **A syscall the host does not implement returns `ENOSYS` and names itself on the
+  page.** Never 0: a run that silently skipped a call and exited cleanly is
+  indistinguishable from one that worked.
+- **It is confronted with `wasmtime`, not asserted.** `tools/playground` runs all eight
+  modules under the reference implementation, records stdout, stderr and the exit status
+  in `testdata/fixtures.json`, then runs the same modules through `static/playground/wasi.js`
+  itself and requires the bytes to match. Running it:
+
+  ```sh
+  cd tools/wasmstage && go run . -out /tmp/staged \
+      zlib.net lua.org sqlite.org filippo.io/age mvdan.cc/sh \
+      github.com/cpuguy83/go-md2man github.com/simdjson/simdjson
+  cd ../playground && PLAYGROUND_WASM_DIR=/tmp/staged go test ./...   # add -update to re-record
+  ```
+
+  Without `PLAYGROUND_WASM_DIR`, `wasmtime` or `node`, those tests **skip** — and a skip
+  is not a pass. The one difference the confrontation has caught so far: sqlite3 printed a
+  233-byte box-drawing table where wasmtime printed `3.53.4`, because `fd_fdstat_get`
+  reported stdout as a terminal. `isatty()` is literally those bits.
+
 ## The stylesheet takes its colours as parameters
 
 `go-authn` and `go-fileshare` carry byte-identical copies of this stylesheet

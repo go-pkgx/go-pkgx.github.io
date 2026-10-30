@@ -1,0 +1,110 @@
+{{/* The playground page.
+
+     ⛔ IT IS NOT layouts/playground.html. Hugo's lookup for a regular page
+     goes layouts/<TYPE>/<LAYOUT>.html, layouts/<TYPE>/single.html,
+     layouts/_default/<LAYOUT>.html, layouts/_default/single.html — there is
+     no entry at the root of layouts/ for anything but the home page, 404 and
+     the generated files. CI pins Hugo 0.135.0 (.github/workflows/hugo.yml),
+     which predates the flattened lookup of 0.146; a template at
+     layouts/playground.html would be found by a developer's newer Hugo and
+     silently ignored by the build that publishes. `_default/<layout>.html` is
+     in BOTH lookup tables, which is why it is here.
+
+     content/playground.md selects it with `layout: playground`. */}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ .Title }} — {{ .Site.Title }}</title>
+<meta name="description" content="Run the go-pkgx factory's wasip1/wasm modules in your browser: age, go-md2man, shfmt, lua, luac, sqlite3, minigzip and simdjson-minify, on a WASI preview1 host written for this page and confronted with wasmtime.">
+<link rel="icon" type="image/svg+xml" href="{{ "favicon.svg" | relURL }}">
+{{ partial "styles.html" . }}
+{{ partial "site-styles.html" . }}
+<link rel="stylesheet" href="{{ "playground/play.css" | relURL }}">
+</head>
+<body class="lm">
+  <header class="nav"><div class="wrap">
+    <a class="brand" href="{{ "/" | relURL }}"><img class="glyph" src="{{ "img/logo.svg" | relURL }}" width="32" height="32" alt="go-pkgx logo"> go-pkgx</a>
+    <nav><a href="{{ "/" | relURL }}">Home</a><a href="{{ "/#registry" | relURL }}">Registry</a><a href="https://go-pkgx.github.io/packages/">Packages</a><a href="https://go-pkgx.github.io/docs/">Docs</a></nav>
+    {{ partial "theme-toggle.html" . }}
+  </div></header>
+  {{ partial "fork-ribbon.html" "https://github.com/go-pkgx/packages" }}
+
+  <section><div class="wrap">
+    <span class="eyebrow">Playground</span>
+    <h1>{{ .Title }}</h1>
+    {{ .Content }}
+
+    <div id="playground" class="pg-wrap" data-modules="{{ "playground/modules/" | relURL }}">
+
+      {{/* ⛔ The honest empty state. A page that rendered an empty picker
+           would look identical whether the registry had nothing or the
+           staging step never ran. */}}
+      <div id="pg-missing" class="pg-missing">
+        <h3>The modules have not been staged.</h3>
+        <p>This page fetches <code id="pg-missing-url">playground/modules/index.json</code>
+           from this site — never from <code>ghcr.io</code>, which sends no CORS headers — and that
+           file is written during the build by <code>tools/wasmstage</code>. It is not here:
+           <code id="pg-missing-why"></code>.</p>
+        <p>That is a build that did not finish, not a platform with nothing on it. The eight
+           modules <em>are</em> published: <code>ghcr.io/go-pkgx/packages</code> carries them under
+           the OCI platform <code>os=wasip1, architecture=wasm</code>, and
+           <code>pkgx --platform wasip1/wasm</code> will fetch them for a local
+           <code>wasmtime</code> in the meantime.</p>
+      </div>
+
+      <div id="pg-ui" hidden>
+        <div class="pg-controls">
+          <div class="pg-field">
+            <label for="pg-module">Module</label>
+            <select id="pg-module"></select>
+            <span class="hint" id="pg-generated"></span>
+          </div>
+          <div class="pg-field">
+            <label for="pg-argv">Command line</label>
+            <input id="pg-argv" spellcheck="false" autocapitalize="off" autocomplete="off">
+            <span class="hint">Quoting only — no expansion, no globbing, no pipeline. The default is
+              the invocation CI proves the bottle with before publishing it.</span>
+          </div>
+          <div class="pg-field">
+            <label for="pg-stdin">Standard input</label>
+            <textarea id="pg-stdin" spellcheck="false"></textarea>
+          </div>
+          <div class="pg-field" id="pg-file-box" hidden>
+            <label for="pg-file-body">A file in the working directory</label>
+            <input id="pg-file-name" spellcheck="false" autocomplete="off">
+            <textarea id="pg-file-body" spellcheck="false"></textarea>
+            <span class="hint">The filesystem is in memory and lasts exactly as long as the run.</span>
+          </div>
+          <div class="pg-field pg-full">
+            <div class="pg-meta">
+              <span>module <code id="pg-sha"></code></span>
+              <span id="pg-size"></span>
+            </div>
+            <div class="pg-actions">
+              <button class="btn btn-primary" id="pg-run" type="button">Run</button>
+              <button class="btn btn-ghost" id="pg-reset" type="button">Reset</button>
+              <span class="pg-status" id="pg-status"></span>
+              <a id="pg-download" hidden>download the output</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="pg-panes">
+          <div class="pg-pane"><h3>stdout</h3><pre id="pg-stdout"></pre></div>
+          <div class="pg-pane"><h3>stderr</h3><pre id="pg-stderr"></pre></div>
+        </div>
+
+        <div class="pg-pane pg-diag" id="pg-diag-box" hidden>
+          <h3>What this host could not do</h3>
+          <pre id="pg-diag"></pre>
+        </div>
+      </div>
+    </div>
+  </div></section>
+
+  <footer><div class="wrap"><span>© the go-pkgx authors · BSD-3-Clause</span><span>Pure Go · CGO_ENABLED=0 · runs on FROM scratch</span></div></footer>
+  <script type="module" src="{{ "playground/app.js" | relURL }}"></script>
+</body>
+</html>
