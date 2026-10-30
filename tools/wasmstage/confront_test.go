@@ -20,6 +20,29 @@
 //	wasip1.yml    filippo.io/age, github.com/cpuguy83/go-md2man, mvdan.cc/sh
 //	wasip1-c.yml  zlib.net, lua.org, sqlite.org, github.com/simdjson/simdjson
 //
+// # IT CAUGHT ONE ON ITS FIRST REAL RUN
+//
+// 2026-10-30, against the catalogue generated 20:37:18Z that day — the first
+// one ever published for wasip1/wasm:
+//
+//	the factory declares 7 … github.com/simdjson/simdjson …
+//	the catalogue yields 6
+//	BUILT BUT NOT DERIVED: github.com/simdjson/simdjson
+//
+// The discriminator below settles it: wasip1-c.yml has listed simdjson since
+// 2026-10-26 19:35 (go-pkgx/packages#377), four days BEFORE that catalogue was
+// generated, so this is not a lane that moved after the snapshot. And the
+// bottle is there — a pinned `wasmstage … github.com/simdjson/simdjson`
+// installs v5.0.5 and stages 432 531 bytes that pass the \0asm check. So the
+// bottle is published, the catalogue does not list it, and the gap is in the
+// catalogue builder.
+//
+// Which is the entire argument for this file. `-derive` was correct and the
+// playground would still have shipped six of seven projects, with a valid
+// manifest, a page that renders and nothing red, until somebody happened to
+// notice simdjson missing. No test written against a fixture could have seen
+// it.
+//
 // ⛔ AND THE GROUND TRUTH IS FETCHED, NOT COPIED. A set of seven names pasted
 // into this file would be a hand-typed list guarding a hand-typed list — the
 // exact defect `-derive` exists to remove. The lane files are read over the
@@ -209,7 +232,8 @@ func TestTheDerivedListMatchesWhatTheFactoryBuilds(t *testing.T) {
 	// bare "not equal".
 	var b strings.Builder
 	fmt.Fprintf(&b, "the derived list and the factory's lanes disagree.\n")
-	fmt.Fprintf(&b, "  catalogue generated %s (%s old)\n", cat.Generated, cat.Age(time.Now()))
+	// Age() already ends in "old"; do not say it twice.
+	fmt.Fprintf(&b, "  catalogue generated %s (%s)\n", cat.Generated, cat.Age(time.Now()))
 	fmt.Fprintf(&b, "  the factory declares %d: %s\n", len(declared), strings.Join(declared, " "))
 	fmt.Fprintf(&b, "  the catalogue yields %d: %s\n", len(derived), strings.Join(derived, " "))
 	if len(missing) > 0 {
