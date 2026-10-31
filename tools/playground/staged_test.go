@@ -10,8 +10,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// shimWorkflow is the file that stages the modules this package confronts.
-const shimWorkflow = repoRoot + "/.github/workflows/shim.yml"
+// stagingWorkflows are every file that stages modules, and they must all name
+// the same set.
+//
+// There were three by 2026-10-31 and only one was checked. `hugo.yml` and
+// `playground.yml` used `wasmstage -derive`, which was right about rot and
+// wrong about what to stage: when the lane grew from 7 projects to 34, a
+// derived run staged 35 modules weighing 441 MB, of which only eight had been
+// confronted with wasmtime. They now name the confronted set, which means
+// three lists exist and all three can drift.
+var stagingWorkflows = []string{
+	repoRoot + "/.github/workflows/shim.yml",
+	repoRoot + "/.github/workflows/hugo.yml",
+	repoRoot + "/.github/workflows/playground.yml",
+}
 
 // TestTheStagedProjectsAreTheConfrontedOnes refuses to let the workflow's
 // project names become a SECOND list.
@@ -41,28 +53,31 @@ func TestTheStagedProjectsAreTheConfrontedOnes(t *testing.T) {
 		want[c.Project] = true
 	}
 
-	got := map[string]bool{}
-	for _, p := range projectsStagedBy(t, shimWorkflow) {
-		got[p] = true
-	}
+	for _, wf := range stagingWorkflows {
+		got := map[string]bool{}
+		for _, p := range projectsStagedBy(t, wf) {
+			got[p] = true
+		}
 
-	for p := range want {
-		if !got[p] {
-			t.Errorf("the fixtures confront %s and the workflow does not stage it: "+
-				"add it to the `stage the modules the fixtures name` step in %s",
-				p, shimWorkflow)
+		for p := range want {
+			if !got[p] {
+				t.Errorf("%s: the fixtures confront %s and this workflow does not stage it: "+
+					"add it to the staging step", wf, p)
+			}
 		}
-	}
-	for p := range got {
-		if !want[p] {
-			t.Errorf("the workflow stages %s and no fixture runs it: "+
-				"record one with `go test ./tools/playground -update`, or drop the name",
-				p)
+		for p := range got {
+			if !want[p] {
+				t.Errorf("%s: this workflow stages %s and no fixture runs it — so the page "+
+					"would offer a module whose behaviour was never compared with wasmtime. "+
+					"Record a fixture with `go test ./tools/playground -update`, or drop the name",
+					wf, p)
+			}
 		}
-	}
-	if t.Failed() {
-		t.Logf("fixtures: %v", sortedKeys(want))
-		t.Logf("workflow: %v", sortedKeys(got))
+		if t.Failed() {
+			t.Logf("fixtures:    %v", sortedKeys(want))
+			t.Logf("%s: %v", wf, sortedKeys(got))
+			return
+		}
 	}
 }
 
@@ -137,6 +152,45 @@ func fixtureProjects(t *testing.T) []string {
 		seen[c.Project] = true
 	}
 	return sortedKeys(seen)
+}
+
+// TestEveryStagingWorkflowIsChecked guards the list above, which is the one
+// thing in this file that a new workflow can silently fall outside of. A fourth
+// workflow staging modules with nothing asserting its list is exactly the hole
+// `hugo.yml` and `playground.yml` sat in while only `shim.yml` was checked.
+func TestEveryStagingWorkflowIsChecked(t *testing.T) {
+	dir := filepath.Join(repoRoot, ".github", "workflows")
+	names, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked := map[string]bool{}
+	for _, w := range stagingWorkflows {
+		checked[filepath.Base(w)] = true
+	}
+	found := 0
+	for _, n := range names {
+		if n.IsDir() {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(dir, n.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), "go run . -out") {
+			continue
+		}
+		found++
+		if !checked[n.Name()] {
+			t.Errorf("%s stages modules and is not in stagingWorkflows: its project list "+
+				"is unchecked, which is how hugo.yml and playground.yml drifted to -derive",
+				n.Name())
+		}
+	}
+	if found != len(stagingWorkflows) {
+		t.Errorf("found %d workflow(s) with a staging step, stagingWorkflows names %d: %v",
+			found, len(stagingWorkflows), stagingWorkflows)
+	}
 }
 
 func sortedKeys(m map[string]bool) []string {

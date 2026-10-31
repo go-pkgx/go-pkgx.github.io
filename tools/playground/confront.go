@@ -72,9 +72,18 @@ type Case struct {
 // Fixtures is the whole recorded confrontation.
 type Fixtures struct {
 	// Comment is for the person who opens the file, not for the code.
-	Comment  string `json:"_comment"`
-	Recorded string `json:"recorded"`
-	Wasmtime string `json:"wasmtime"`
+	Comment string `json:"_comment"`
+	// Withdrawn records a module that WAS confronted and no longer is, with the
+	// reason and the condition for putting it back.
+	//
+	// It is a field rather than a JSON comment — JSON has none — and it is in
+	// this struct rather than only in the file because `Save` round-trips the
+	// struct: a `-update` run would otherwise silently delete the explanation
+	// for why the set is smaller than it looks, which is the only thing
+	// stopping someone restoring a module into a gate that cannot be green.
+	Withdrawn string `json:"_withdrawn,omitempty"`
+	Recorded  string `json:"recorded"`
+	Wasmtime  string `json:"wasmtime"`
 	// GuestCwd is the directory the guest believes it is in. wasmtime is told
 	// the host path through $PWD; the shim's in-memory filesystem uses this
 	// fixed one, so a fixture does not depend on where it was recorded.

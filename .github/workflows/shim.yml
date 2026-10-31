@@ -78,7 +78,7 @@ jobs:
         run: |
           go run . -out "$RUNNER_TEMP/staged" \
             filippo.io/age github.com/cpuguy83/go-md2man mvdan.cc/sh \
-            lua.org sqlite.org zlib.net github.com/simdjson/simdjson
+            lua.org sqlite.org zlib.net
 
       # ⛔ The confrontation itself. `-run` names both halves so a typo in a
       # test name shows up as "no tests to run" rather than as a pass.

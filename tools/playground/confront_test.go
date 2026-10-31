@@ -81,8 +81,21 @@ func TestFixturesWellFormed(t *testing.T) {
 			}
 		}
 	}
-	if len(f.Cases) < 8 {
-		t.Fatalf("%d cases: the eight published modules are the population this page shows", len(f.Cases))
+	// ⛔ SEVEN, AND THE MISSING ONE MUST BE ACCOUNTED FOR.
+	//
+	// This said eight until 2026-10-31, when simdjson-minify was withdrawn
+	// because its registry tag serves two different modules at different times
+	// (go-pkgx/packages#393). Lowering a floor is exactly how a population
+	// quietly shrinks, so the floor is paired with a requirement that the file
+	// SAY why: a future reduction to six has to explain itself in the same
+	// place, and a restoration has to remove the note.
+	if len(f.Cases) < 7 {
+		t.Fatalf("%d cases: fewer than the modules this page confronts", len(f.Cases))
+	}
+	if len(f.Cases) < 8 && f.Withdrawn == "" {
+		t.Fatal("fewer than eight cases and no `_withdrawn` note saying which module " +
+			"left and why: a set that shrank without a reason is indistinguishable " +
+			"from one that was never complete")
 	}
 }
 

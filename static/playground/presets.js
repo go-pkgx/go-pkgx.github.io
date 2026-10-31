@@ -20,5 +20,11 @@ export const PRESETS = {
   luac: { args: ["-v"] },
   sqlite3: { args: [":memory:", "select sqlite_version();"] },
   minigzip: { args: [], stdin: "hello wasip1\n", files: { "t.txt": "hello wasip1\n" } },
-  "simdjson-minify": { args: [], stdin: '{ "a" : [1, 2 ] }\n', files: { "j.json": '{ "a" : [1, 2 ] }\n' } },
+  // simdjson-minify was here until 2026-10-31. It is withdrawn with its
+  // fixture, not merely unstaged: its registry tag serves two different modules
+  // at different times (go-pkgx/packages#393), so nothing can confront it.
+  //
+  // A preset for a module no fixture confronts is caught by
+  // TestPagePresetsAreTheConfrontedInvocations, which is how this line was
+  // found rather than forgotten. Restore it with the fixture, in one commit.
 };

@@ -164,6 +164,15 @@ type Manifest struct {
 	Modules   []Module `json:"modules"`
 }
 
+// defaultMaxBytes bounds a staged set at 48 MiB.
+//
+// Chosen against a measurement, not a feeling: the eight modules the page's
+// WASI host is actually CONFRONTED with weigh about 21 MB, and the whole
+// wasip1/wasm platform weighed 441 MB across 35 modules on 2026-10-31. 48 MiB
+// leaves the confronted set room to roughly double and refuses the other case
+// loudly.
+const defaultMaxBytes = 48 << 20
+
 func main() { os.Exit(run(os.Args[1:], os.Stdout, os.Stderr)) }
 
 func run(args []string, stdout, stderr io.Writer) int {
@@ -173,6 +182,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	store := fs_.String("store", "", "install into this directory (default: a temporary one, removed after)")
 	generated := fs_.String("generated", "", "the timestamp to record (default: the store's own, for a reproducible run)")
 	derived := fs_.Bool("derive", false, "take the project list from the published "+stageOS+"/"+stageArch+" catalogue instead of the arguments")
+	maxBytes := fs_.Int64("max-bytes", defaultMaxBytes, "refuse to stage more than this many bytes in total (0 disables the budget)")
 	if err := fs_.Parse(args); err != nil {
 		return 2
 	}
@@ -259,6 +269,45 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if len(mods) == 0 {
 		fmt.Fprintln(stderr, "wasmstage: no wasm module was staged — a registry that answered nothing and a site with nothing to show print the same page, so this is a failure")
 		return 1
+	}
+
+	// ⛔ THE BUDGET, AND WHY IT REFUSES RATHER THAN TRIMS.
+	//
+	// This was written for seven projects and ~21 MB. On 2026-10-31 the lane
+	// went to 34 projects and the same `-derive` run staged 35 modules
+	// totalling 441 MB — measured, not estimated. Every weekly refresh and
+	// every content push to main pulls that from ghcr and puts it in the Pages
+	// artifact, which replaces the whole site.
+	//
+	// It refuses instead of staging the first N bytes because a truncated set
+	// is the exact failure this tool's confrontation test was written against:
+	// six of seven projects yields a valid manifest, a page that renders and
+	// nothing red. A deployment that is short some modules and says so is
+	// recoverable; one that is short some modules and looks complete is not.
+	//
+	// The number is a policy, so it is a flag and the failure prints the
+	// measurement: whoever raises it should be deciding, not discovering.
+	if *maxBytes > 0 {
+		var total int64
+		for _, mod := range mods {
+			total += mod.Bytes
+		}
+		if total > *maxBytes {
+			fmt.Fprintf(stderr, "wasmstage: %d module(s) weigh %d bytes, over the -max-bytes budget of %d\n",
+				len(mods), total, *maxBytes)
+			fmt.Fprintln(stderr, "wasmstage: the largest are:")
+			big := make([]Module, len(mods))
+			copy(big, mods)
+			sort.Slice(big, func(i, j int) bool { return big[i].Bytes > big[j].Bytes })
+			for i, mod := range big {
+				if i == 5 {
+					break
+				}
+				fmt.Fprintf(stderr, "wasmstage:   %-36s %10d bytes\n", mod.Project, mod.Bytes)
+			}
+			fmt.Fprintln(stderr, "wasmstage: NOTHING was truncated — a short set that looks complete is the failure this refuses to ship. Raise -max-bytes deliberately, or stage fewer projects.")
+			return 1
+		}
 	}
 
 	m := Manifest{Platform: stageOS + "/" + stageArch, Generated: *generated, Modules: mods}
