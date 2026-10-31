@@ -116,7 +116,7 @@
       "version": "5.0.5",
       "bin": "simdjson-minify",
       "module": "github.com/simdjson/simdjson/simdjson-minify.wasm",
-      "sha256": "87e24e8900934d815694ad6ddb90bef076c676c5f75e504e7580f85c6bf814e5",
+      "sha256": "c946f9c5c53d5acd8f2a4ffe8c61ad422efd8ad1db620d3059069e37883aa691",
       "args": [],
       "files": {
         "j.json": "eyAiYSIgOiBbMSwgMiBdIH0K"
