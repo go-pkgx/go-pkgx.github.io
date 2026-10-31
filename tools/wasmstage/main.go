@@ -70,6 +70,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/go-pkgx/bottle"
 )
@@ -310,7 +311,37 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
-	m := Manifest{Platform: stageOS + "/" + stageArch, Generated: *generated, Modules: mods}
+	// ⛔ THE FLAG PROMISED A DEFAULT THAT DID NOT EXIST.
+	//
+	// `-generated`'s help has always said "(default: the store's own, for a
+	// reproducible run)", and there was no fallback: the field was assigned
+	// straight from the flag, so it was the empty string unless somebody
+	// passed one — and no workflow does. The manifest served at
+	// /playground/modules/index.json carried `"generated": ""` from the day it
+	// shipped, while #67's body said the page shows "a manifest [that] says
+	// when it was generated".
+	//
+	// It matters because the whole point of a weekly refresh is freshness, and
+	// an empty field cannot tell a reader whether these modules are a day or a
+	// month old. A page that cannot say how stale it is looks exactly as
+	// current as one that is.
+	//
+	// The default is the NEWEST STAGED MODULE'S mtime, not time.Now(): those
+	// come out of the bottle archives, so two runs over the same bottles
+	// produce the same manifest, which is what "for a reproducible run" was
+	// promising. And a zero time is a FAILURE rather than an empty string,
+	// because emitting nothing is the behaviour being fixed.
+	stamp := *generated
+	if stamp == "" {
+		t, err := newestModTime(*out, mods)
+		if err != nil {
+			fmt.Fprintln(stderr, "wasmstage:", err)
+			return 1
+		}
+		stamp = t.UTC().Format(time.RFC3339)
+	}
+
+	m := Manifest{Platform: stageOS + "/" + stageArch, Generated: stamp, Modules: mods}
 	b, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		fmt.Fprintln(stderr, "wasmstage:", err)
@@ -325,6 +356,30 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stdout, "\n%d module(s) staged into %s\n", len(mods), *out)
 	return 0
+}
+
+// newestModTime is the latest mtime among the staged modules.
+//
+// It refuses a zero time rather than returning one: `"generated": ""` and
+// `"generated": "0001-01-01T00:00:00Z"` are both a manifest that cannot say how
+// old it is, and the second is worse for looking like an answer.
+func newestModTime(out string, mods []Module) (time.Time, error) {
+	var newest time.Time
+	for _, mod := range mods {
+		fi, err := os.Stat(filepath.Join(out, filepath.FromSlash(mod.Path)))
+		if err != nil {
+			return time.Time{}, err
+		}
+		if fi.ModTime().After(newest) {
+			newest = fi.ModTime()
+		}
+	}
+	if newest.IsZero() {
+		return time.Time{}, fmt.Errorf("no staged module has a modification time, so the "+
+			"manifest cannot say when it was generated; pass -generated to set it (%d module(s))",
+			len(mods))
+	}
+	return newest, nil
 }
 
 // stage copies every wasm module the named projects ship into out.

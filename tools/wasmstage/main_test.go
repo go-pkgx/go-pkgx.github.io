@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-pkgx/bottle"
 )
@@ -73,6 +74,46 @@ func readManifest(t *testing.T, dir string) Manifest {
 		t.Fatal(err)
 	}
 	return m
+}
+
+// TestTheManifestSaysWhenItWasGenerated: the `-generated` flag's help has
+// always promised "(default: the store's own)" and there was no default, so
+// every manifest ever published carried `"generated": ""` — including the live
+// one, checked by fetching it. A field that is always empty is worse than an
+// absent one: the page cannot say how stale it is, and therefore looks exactly
+// as current as a fresh one.
+func TestTheManifestSaysWhenItWasGenerated(t *testing.T) {
+	out := t.TempDir()
+	store := t.TempDir()
+	withSeams(t, nil, nil)
+	write(t, filepath.Join(store, "lua.org/v5.4.9/bin/lua.wasm"), wasmModule)
+
+	if code, _, errb := drive(t, "-out", out, "-store", store, "lua.org"); code != 0 {
+		t.Fatalf("want 0, got %d: %s", code, errb)
+	}
+	got := readManifest(t, out).Generated
+	if got == "" {
+		t.Fatal("generated is empty: the manifest cannot say when it was made")
+	}
+	// Parseable and not the zero time — "0001-01-01T00:00:00Z" would satisfy a
+	// non-empty check while being exactly as useless.
+	when, err := time.Parse(time.RFC3339, got)
+	if err != nil {
+		t.Fatalf("generated %q is not RFC3339: %v", got, err)
+	}
+	if when.IsZero() || when.Year() < 2000 {
+		t.Errorf("generated %q is the zero time dressed as an answer", got)
+	}
+
+	// ⛔ And it is derived, not invented: an explicit -generated wins, which is
+	// what makes a run reproducible rather than merely timestamped.
+	const pinned = "2026-10-30T20:58:27Z"
+	if code, _, errb := drive(t, "-out", out, "-store", store, "-generated", pinned, "lua.org"); code != 0 {
+		t.Fatalf("want 0, got %d: %s", code, errb)
+	}
+	if got := readManifest(t, out).Generated; got != pinned {
+		t.Errorf("-generated %q was overridden by %q", pinned, got)
+	}
 }
 
 // TestTheBudgetRefusesAndDoesNotTruncate is the test for the one behaviour
