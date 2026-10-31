@@ -272,3 +272,144 @@ func TestTheVersionIsReadAfterTheWholeProjectName(t *testing.T) {
 		}
 	}
 }
+
+// withCatalog replaces the catalogue fetch, asserting the platform on the way
+// through for the same reason the pick and the install do.
+func withCatalog(t *testing.T, cat bottle.Catalog, err error) {
+	t.Helper()
+	prev := stageCatalog
+	stageCatalog = func(osn, arch string) (bottle.Catalog, error) {
+		if osn != stageOS || arch != stageArch {
+			t.Errorf("asked for the %s/%s catalogue, want %s/%s", osn, arch, stageOS, stageArch)
+		}
+		return cat, err
+	}
+	t.Cleanup(func() { stageCatalog = prev })
+}
+
+// The shape -derive exists for: the list comes off the catalogue, so a bottle
+// published in ANOTHER repository arrives here without anybody editing a file.
+func TestDeriveTakesTheProjectListFromTheCatalogue(t *testing.T) {
+	out := t.TempDir()
+	store := t.TempDir()
+	withSeams(t, nil, nil)
+	withCatalog(t, bottle.Catalog{Projects: []bottle.CatalogProject{
+		// Out of order on purpose: the staged list is sorted, so a diff
+		// of the manifest reads.
+		{Project: "sqlite.org", Versions: []string{"3.53.4"}},
+		{Project: "lua.org", Versions: []string{"5.4.9"}},
+		// The catalogue publishes ITSELF as an ordinary bottle. It is the
+		// question, not an answer.
+		{Project: bottle.CatalogProjectName, Versions: []string{"1"}},
+		// Named by the pantry, nothing published here: CatalogProject
+		// documents an empty Versions as exactly that.
+		{Project: "unpublished.org"},
+	}}, nil)
+	write(t, filepath.Join(store, "sqlite.org/v3.53.4/bin/sqlite3.wasm"), wasmModule)
+	write(t, filepath.Join(store, "lua.org/v5.4.9/bin/lua.wasm"), wasmModule)
+
+	code, stdout, errb := drive(t, "-out", out, "-store", store, "-derive")
+	if code != 0 {
+		t.Fatalf("want 0, got %d: %s", code, errb)
+	}
+	if !strings.Contains(stdout, "derived 2 project(s)") {
+		t.Errorf("the derived list was not shown:\n%s", stdout)
+	}
+	for _, unwanted := range []string{bottle.CatalogProjectName, "unpublished.org"} {
+		if strings.Contains(stdout, unwanted) {
+			t.Errorf("%s should not be in the derived list:\n%s", unwanted, stdout)
+		}
+	}
+	m := readManifest(t, out)
+	if len(m.Modules) != 2 || m.Modules[0].Project != "lua.org" || m.Modules[1].Project != "sqlite.org" {
+		t.Fatalf("got %+v", m.Modules)
+	}
+}
+
+// ⛔ A CATALOGUE IT CANNOT READ IS A FAILURE, NEVER A BUILT-IN LIST. Before
+// go-pkgx/packages' weekly catalogue job has published wasip1/wasm once, this
+// is the error; a fallback here would serve a page that looks current and is
+// not, which is the failure tools/versioncheck was written for.
+func TestACatalogueItCannotReadIsAFailureNotABuiltInList(t *testing.T) {
+	out := t.TempDir()
+	withSeams(t, nil, nil)
+	withCatalog(t, bottle.Catalog{}, errors.New("the index has 3 entry(ies) and none of them is wasip1/wasm"))
+
+	code, stdout, errb := drive(t, "-out", out, "-store", t.TempDir(), "-derive")
+	if code != 1 {
+		t.Fatalf("want 1, got %d", code)
+	}
+	if !strings.Contains(errb, "none of them is wasip1/wasm") {
+		t.Errorf("the registry's own words were swallowed: %s", errb)
+	}
+	if !strings.Contains(errb, "NO built-in project list") {
+		t.Errorf("the refusal did not say why: %s", errb)
+	}
+	// The control: no project name may appear ANYWHERE in the output. A
+	// fallback list would be invisible to a test that only checked the exit
+	// status, because a staged run also exits non-zero when the store is
+	// empty.
+	for _, p := range []string{
+		"filippo.io/age", "github.com/cpuguy83/go-md2man", "mvdan.cc/sh",
+		"zlib.net", "lua.org", "sqlite.org", "github.com/simdjson/simdjson",
+	} {
+		if strings.Contains(stdout+errb, p) {
+			t.Errorf("%s was named with no catalogue to name it — that is a fallback list:\n%s%s", p, stdout, errb)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(out, "index.json")); err == nil {
+		t.Error("a manifest was written from a catalogue that was never read")
+	}
+}
+
+// A catalogue that answered, with nothing published for this platform, is the
+// same failure wearing a different hat.
+func TestACatalogueWithNothingPublishedHereIsAFailure(t *testing.T) {
+	withSeams(t, nil, nil)
+	withCatalog(t, bottle.Catalog{Projects: []bottle.CatalogProject{
+		{Project: "named.org"}, {Project: "also-named.org"},
+	}}, nil)
+	code, _, errb := drive(t, "-out", t.TempDir(), "-store", t.TempDir(), "-derive")
+	if code != 1 {
+		t.Fatalf("want 1, got %d", code)
+	}
+	if !strings.Contains(errb, "not one of them is published here") {
+		t.Errorf("the reason was not given: %s", errb)
+	}
+}
+
+// ⛔ TWO QUESTIONS, NOT A PRECEDENCE. A derived sweep and a pinned run are
+// different runs; answering one and leaving the operator to discover which
+// is how a pinned reproduction quietly becomes a sweep.
+func TestDeriveAndAnExplicitListAreNotMixed(t *testing.T) {
+	withSeams(t, nil, nil)
+	withCatalog(t, bottle.Catalog{Projects: []bottle.CatalogProject{
+		{Project: "lua.org", Versions: []string{"5.4.9"}},
+	}}, nil)
+	code, _, errb := drive(t, "-out", t.TempDir(), "-derive", "sqlite.org")
+	if code != 2 {
+		t.Fatalf("want 2, got %d", code)
+	}
+	if !strings.Contains(errb, "two different runs") {
+		t.Errorf("the refusal did not say why: %s", errb)
+	}
+}
+
+// The pinned run still works, and asks no catalogue at all: a bisection must
+// not move because the registry did.
+func TestAPinnedRunDoesNotConsultTheCatalogue(t *testing.T) {
+	out := t.TempDir()
+	store := t.TempDir()
+	withSeams(t, nil, nil)
+	prev := stageCatalog
+	stageCatalog = func(string, string) (bottle.Catalog, error) {
+		t.Error("a pinned run asked the catalogue")
+		return bottle.Catalog{}, nil
+	}
+	t.Cleanup(func() { stageCatalog = prev })
+	write(t, filepath.Join(store, "lua.org/v5.4.9/bin/lua.wasm"), wasmModule)
+
+	if code, _, errb := drive(t, "-out", out, "-store", store, "lua.org"); code != 0 {
+		t.Fatalf("want 0, got %d: %s", code, errb)
+	}
+}

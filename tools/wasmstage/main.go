@@ -21,6 +21,28 @@
 // decompressor — which is also the only shape that stays correct when a lane
 // changes its compression.
 //
+// # Why the project list is DERIVED, not typed
+//
+// ⛔ A HAND-TYPED LIST DRIFTS EXACTLY LIKE A VERSION PIN. `tools/versioncheck`
+// exists in this very repository because the install section named pkgm v0.1.4
+// and pkgx v0.1.5 while the releases were v0.1.7 and v0.1.10: nobody mistyped
+// anything, the world moved and the file did not. Seven project names typed
+// into a workflow are the same object. The eighth wasip1/wasm bottle will be
+// published in go-pkgx/packages — a DIFFERENT repository — and a list living
+// here would go on naming seven with nothing anywhere going red.
+//
+// So `-derive` asks the published wasip1/wasm catalogue what exists, and the
+// explicit arguments stay for a pinned run (a reproduction, a bisection, a
+// test of one project) where the answer must not move under the operator.
+//
+// ⛔ AND IT FAILS RATHER THAN FALL BACK. There is deliberately no built-in
+// list behind `-derive`: a page quietly showing last month's set is
+// indistinguishable from a current one, while a run that stops says what it
+// could not ask. Before go-pkgx/packages' weekly catalogue job has published
+// wasip1/wasm for the first time, the fetch fails with "platform not in
+// index" — and that is the correct, loud outcome, not a reason for a cached
+// answer.
+//
 // # What it refuses to do
 //
 // ⛔ AN EMPTY MANIFEST IS A FAILURE, not a site with nothing to show. A
@@ -39,6 +61,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -51,12 +74,76 @@ import (
 	"github.com/go-pkgx/bottle"
 )
 
+// The one platform this command is about. Named rather than repeated, because
+// the manifest, the pick and the install all have to agree: staging a
+// host-architecture bottle into a web page is the single mistake that would
+// look fine until somebody opened the page.
+const (
+	stageOS   = "wasip1"
+	stageArch = "wasm"
+)
+
 // Seams, so the whole command is drivable without a network.
 var (
 	stagePick    = bottle.PickVersionFor
 	stageInstall = bottle.InstallFor
 	stageTempDir = os.MkdirTemp
+	stageCatalog = fetchCatalog
 )
+
+// fetchCatalog pulls the published catalogue for one platform.
+//
+// It goes through bottle.FetchCatalog rather than reading the layer itself,
+// because that path VERIFIES the catalogue's signature. A catalogue is "only a
+// list of names" right up to the moment something installs what it names —
+// here, unattended, in CI.
+func fetchCatalog(osn, arch string) (bottle.Catalog, error) {
+	c, err := bottle.NewOCIClient(bottle.DistBase)
+	if err != nil {
+		return bottle.Catalog{}, err
+	}
+	return bottle.FetchCatalog(c, osn, arch)
+}
+
+// derive asks the published catalogue which projects ship a bottle for this
+// platform.
+//
+// ⛔ THE TEST IS A NON-EMPTY Versions, NOT A MATCH ON Platforms. The catalogue
+// is published per platform and `bk catalog --versions` writes the newest
+// version THIS platform really carries, so a non-empty Versions is the fact
+// that something is published here; CatalogProject documents Platforms as
+// legally empty, and filtering on it would silently drop real projects.
+func derive(osn, arch string) ([]string, error) {
+	cat, err := stageCatalog(osn, arch)
+	if err != nil {
+		return nil, err
+	}
+	var projects []string
+	for _, p := range cat.Projects {
+		// The catalogue publishes itself as an ordinary bottle. It is a
+		// list of names, not a wasm module, and staging it would be
+		// staging the question.
+		if p.Project == bottle.CatalogProjectName || len(p.Versions) == 0 {
+			continue
+		}
+		projects = append(projects, p.Project)
+	}
+	sort.Strings(projects)
+	if len(projects) == 0 {
+		return nil, fmt.Errorf("the %s/%s catalogue lists %d project(s) and not one of them is published here — a catalogue that answered nothing and a platform with nothing on it print the same list", osn, arch, len(cat.Projects))
+	}
+	return projects, nil
+}
+
+// errNoFallback is the whole argument for failing, written where the operator
+// reads it.
+var errNoFallback = errors.New(`there is deliberately NO built-in project list to fall back to:
+  a page quietly showing last month's set is indistinguishable from a current one,
+  while a run that stops says what it could not ask -- the same reason
+  tools/versioncheck exists rather than a comment asking people to check the pins.
+  The catalogue is published weekly by go-pkgx/packages as ` + bottle.CatalogProjectName + `
+  for ` + stageOS + `/` + stageArch + `; before that job has run once, this is what "platform not in
+  index" looks like, and the answer is to wait for it, not to invent a list`)
 
 // Module is one staged wasm module, as the page reads it.
 type Module struct {
@@ -85,6 +172,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	out := fs_.String("out", "", "directory to write the modules and index.json into (required)")
 	store := fs_.String("store", "", "install into this directory (default: a temporary one, removed after)")
 	generated := fs_.String("generated", "", "the timestamp to record (default: the store's own, for a reproducible run)")
+	derived := fs_.Bool("derive", false, "take the project list from the published "+stageOS+"/"+stageArch+" catalogue instead of the arguments")
 	if err := fs_.Parse(args); err != nil {
 		return 2
 	}
@@ -93,8 +181,28 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	projects := fs_.Args()
-	if len(projects) == 0 {
-		fmt.Fprintln(stderr, "wasmstage: name at least one project")
+	switch {
+	case *derived && len(projects) > 0:
+		// Refused rather than silently preferred, in either direction: a
+		// run that was asked two different questions has no right to
+		// answer one of them and leave the operator to find out which.
+		fmt.Fprintln(stderr, "wasmstage: -derive and a project list are two different runs — a derived sweep, or a pinned one; name one")
+		return 2
+	case *derived:
+		d, err := derive(stageOS, stageArch)
+		if err != nil {
+			fmt.Fprintf(stderr, "wasmstage: -derive: %v\n", err)
+			fmt.Fprintln(stderr, "wasmstage:", errNoFallback)
+			return 1
+		}
+		projects = d
+		fmt.Fprintf(stdout, "derived %d project(s) from the %s/%s catalogue:\n", len(projects), stageOS, stageArch)
+		for _, p := range projects {
+			fmt.Fprintf(stdout, "  %s\n", p)
+		}
+		fmt.Fprintln(stdout)
+	case len(projects) == 0:
+		fmt.Fprintln(stderr, "wasmstage: name at least one project, or pass -derive")
 		return 2
 	}
 
@@ -127,12 +235,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 	// shared resolution to abort.
 	installed := 0
 	for _, p := range projects {
-		v, err := stagePick(p, "*", "wasip1", "wasm")
+		v, err := stagePick(p, "*", stageOS, stageArch)
 		if err != nil {
 			fmt.Fprintf(stderr, "wasmstage: %s: %v\n", p, err)
 			continue
 		}
-		if _, err := stageInstall(bottle.Resolved{Project: p, Version: v}, dir, "wasip1", "wasm"); err != nil {
+		if _, err := stageInstall(bottle.Resolved{Project: p, Version: v}, dir, stageOS, stageArch); err != nil {
 			fmt.Fprintf(stderr, "wasmstage: %s: %v\n", p, err)
 			continue
 		}
@@ -153,7 +261,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	m := Manifest{Platform: "wasip1/wasm", Generated: *generated, Modules: mods}
+	m := Manifest{Platform: stageOS + "/" + stageArch, Generated: *generated, Modules: mods}
 	b, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		fmt.Fprintln(stderr, "wasmstage:", err)
