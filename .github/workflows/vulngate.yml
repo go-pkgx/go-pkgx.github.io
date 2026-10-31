@@ -15,7 +15,7 @@
 # Raising both `go` directives to 1.27.2 took it to ZERO — not one notice,
 # zero. It needed no dependency bump.
 #
-# ⛔ IT SCANS tools/versioncheck, NOT THE ROOT. The root module is the SITE's:
+# ⛔ IT SCANNED tools/versioncheck, NOT THE ROOT. The root module is the SITE's:
 # it pins the landingkit Hugo module and contains no Go packages at all, so
 # `govulncheck ./...` there writes a report with no SBOM in it. vulngate
 # refuses that report rather than reading it as a clean bill —
@@ -25,6 +25,24 @@
 #   finding nothing
 #
 # — which is how the right directory was found rather than assumed.
+#
+# ⛔ AND THEN THE REPOSITORY GREW AROUND THAT ONE DIRECTORY. By 2026-10-31 there
+# were FOUR modules: the root, tools/versioncheck, tools/wasmstage (the
+# playground's staging tool: an OCI client, x/crypto, two decompressors) and
+# tools/playground (the WASI confrontation). Two of them had never been asked
+# about anything, and tools/wasmstage is both the one with a real dependency
+# surface and the one whose output is deployed. Found by running
+# go-fleettools/fleettools' `vulnscan` over the organisation, which reported
+# this repository UNREAD rather than clean — a refusal to answer outranking an
+# answer, which is the only reason it surfaced at all.
+#
+# The reasoning above was right and it named ONE directory. So the directory is
+# no longer named: `tools/vulnmods` DISCOVERS every go.mod and scans each, and a
+# fifth tool is covered with no edit here. It skips a module whose
+# `go list ./...` matches no packages — measured, not inferred from vulngate's
+# refusal, because a module that has STOPPED BUILDING produces that same
+# refusal — and it fails if NO module was actually scanned, because "everything
+# was skipped" and "nothing was found" must not look alike.
 name: govulncheck
 
 on:
@@ -58,13 +76,23 @@ jobs:
       # nothing found. Scanner @latest, judge pinned: the scanner should know
       # about an advisory published this morning, the verdict should not
       # change under the repository without a commit.
-      - name: govulncheck, judged by vulngate
-        working-directory: tools/versioncheck
+      - name: every module, judged by vulngate
         run: |
           set -eu
           go install golang.org/x/vuln/cmd/govulncheck@latest
           go install github.com/go-fleettools/fleettools/cmd/vulngate@v0.23.0
           BIN="$(go env GOPATH)/bin"
-          "$BIN/govulncheck" -format json ./... > "$RUNNER_TEMP/vuln.json" || true
-          test -s "$RUNNER_TEMP/vuln.json" || { echo "::error::govulncheck wrote nothing at all"; exit 1; }
-          "$BIN/vulngate" -go "$(go env GOVERSION)" "$RUNNER_TEMP/vuln.json"
+          cd tools/vulnmods
+          go run . -root ../.. -govulncheck "$BIN/govulncheck" -vulngate "$BIN/vulngate"
+
+      # The scanner itself is tested, because its DISCOVERY is the thing that
+      # replaced a hand-named directory. A discovery that quietly returned one
+      # module would pass every assertion above and be the original defect
+      # again, so one of its tests asserts against this repository's real tree.
+      - name: the scanner's own tests
+        working-directory: tools/vulnmods
+        run: |
+          set -eu
+          test -z "$(gofmt -l .)" || { gofmt -d .; exit 1; }
+          go vet ./...
+          go test ./...
