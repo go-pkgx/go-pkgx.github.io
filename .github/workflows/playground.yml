@@ -146,16 +146,37 @@ jobs:
           wget -O hugo.deb "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
           sudo dpkg -i hugo.deb
 
-      # ⛔ -derive, NOT A LIST OF NAMES. The seven projects publishing
-      # wasip1/wasm bottles today are seven because that is what the
-      # catalogue says this week. If the catalogue cannot be read the step
-      # fails and the site is NOT republished -- the previously deployed page
-      # stays up, which is a page whose modules are a week old and whose
-      # manifest says when it was generated, rather than a fresh-looking page
-      # built from a list somebody typed in 2026.
+      # ⛔ THIS SAID `-derive`, AND THE MEASUREMENT CHANGED THE ANSWER.
+      #
+      # The argument for deriving was rot: a list of seven typed into a file
+      # goes stale when the eighth bottle is published in another repository.
+      # That argument is still correct, and `wasmstage -derive` still exists
+      # and is still how you find out what the platform holds.
+      #
+      # It is not the right thing to STAGE. On 2026-10-31 the lane went from 7
+      # projects to 34 and a derived run staged 35 modules weighing 441 MB,
+      # against the ~21 MB this workflow was written for. Size alone would be
+      # an argument about cost; the decisive one is that only EIGHT of those
+      # modules have had their behaviour confronted with wasmtime, and this
+      # page's claim is that what you run here is run on a host checked against
+      # the reference implementation. Shipping 27 unconfronted modules would
+      # make the page's own headline false for most of what it offers.
+      #
+      # So the staged set is the CONFRONTED set, and it is not hand-maintained:
+      # TestTheStagedProjectsAreTheConfrontedOnes in tools/playground parses
+      # this file and requires this list to equal the confrontation's fixtures.
+      # Adding a fixture without adding it here goes red, and vice versa.
+      #
+      # The rest of the platform is not hidden: the docs list all 34 and they
+      # install with `pkgx --platform wasip1/wasm` for a local wasmtime.
       - name: stage the wasip1/wasm modules
         working-directory: tools/wasmstage
-        run: go run . -derive -out "${{ github.workspace }}/static/playground/modules"
+        env:
+          OUT: ${{ github.workspace }}/static/playground/modules
+        run: |
+          go run . -out "$OUT" \
+            filippo.io/age github.com/cpuguy83/go-md2man mvdan.cc/sh \
+            lua.org sqlite.org zlib.net github.com/simdjson/simdjson
 
       - name: Setup Pages
         id: pages

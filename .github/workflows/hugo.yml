@@ -77,10 +77,33 @@ jobs:
       # site — modules and all — stays up. Stale and whole beats fresh and
       # amputated; `continue-on-error` here would reinstate exactly the bug
       # this step closes.
+      # ⛔ THE CONFRONTED SET, NOT `-derive`. This said `-derive` until
+      # 2026-10-31, when the wasip1 lane went from 7 projects to 34 and the
+      # derived run staged 35 modules weighing 441 MB — measured. Two reasons
+      # it is now a list, and the second is the real one:
+      #
+      #  - 441 MB would travel in the Pages artifact on every content push and
+      #    every weekly refresh, for a demo page;
+      #  - and only EIGHT of those modules have had their behaviour confronted
+      #    with wasmtime. The page's claim is "run on a WASI host confronted
+      #    with the reference implementation", and offering 27 modules running
+      #    on an unverified host would make that claim false for most of what
+      #    a visitor can click.
+      #
+      # The names are NOT hand-maintained: `tools/playground` has
+      # TestTheStagedProjectsAreTheConfrontedOnes, which parses this file and
+      # requires this list to equal the fixtures the confrontation runs. The
+      # full platform is in the docs and installable with `pkgx`; the
+      # playground is the confronted subset on purpose.
       - name: Stage the wasip1/wasm playground modules
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: tools/wasmstage
-        run: go run . -derive -out "${{ github.workspace }}/static/playground/modules"
+        env:
+          OUT: ${{ github.workspace }}/static/playground/modules
+        run: |
+          go run . -out "$OUT" \
+            filippo.io/age github.com/cpuguy83/go-md2man mvdan.cc/sh \
+            lua.org sqlite.org zlib.net github.com/simdjson/simdjson
 
       - name: Build
         env:

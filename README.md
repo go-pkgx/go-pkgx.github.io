@@ -42,19 +42,43 @@ Three things about it are load-bearing:
   233-byte box-drawing table where wasmtime printed `3.53.4`, because `fd_fdstat_get`
   reported stdout as a terminal. `isatty()` is literally those bits.
 
+### ⛔ The playground carries the CONFRONTED set, not the catalogue
+
+`wasmstage -derive` asks the published catalogue what exists, and that is still
+how you find out. It is **not** what the deploy stages.
+
+Measured on 2026-10-31, when the wasip1 lane went from 7 projects to 34: a
+derived run staged **35 modules weighing 441 MB**, against the ~21 MB this was
+written for. The size would be an argument about cost. The decisive argument is
+that only **eight** of those modules have had their behaviour confronted with
+`wasmtime`, and this page's claim is that what you run here runs on a host
+checked against the reference implementation — offering 27 unconfronted modules
+would make the headline false for most of what a visitor can click.
+
+So all three staging workflows name the confronted set, `wasmstage` enforces a
+`-max-bytes` budget (48 MiB by default) that **refuses rather than truncates**,
+and the rest of the platform is in the docs and installs with
+`pkgx --platform wasip1/wasm` for a local `wasmtime`.
+
+A budget that staged the first N bytes would produce a short set with a valid
+manifest and a page that renders — which is the failure
+`tools/wasmstage/confront_test.go` exists to catch one project at a time. Its
+test asserts a non-zero exit, the measurement in the message, and **no
+`index.json` at all**.
+
 ### Two lists, kept equal by a test
 
-The modules the confrontation runs are named twice — in `testdata/fixtures.json` and in
-the staging step of `.github/workflows/shim.yml` — and neither failure of the pair is
+The modules are now named in `testdata/fixtures.json` and in the staging step of **three**
+workflows — `shim.yml`, `hugo.yml` and `playground.yml` — and no failure of that set is
 legible on its own. A fixture with no name in the workflow fails several steps later on a
 missing path, which reads like a staging bug; a name with no fixture pulls 21 MB and runs
-nothing, passing every assertion. `TestTheStagedProjectsAreTheConfrontedOnes` parses the
-workflow and requires the two sets to be equal, naming which side is short.
+nothing, passing every assertion. `TestTheStagedProjectsAreTheConfrontedOnes` parses each
+workflow and requires its set to equal the fixtures, naming which side is short.
 
-The staged list for the **deployed page** is a different thing and is *not* pinned:
-`wasmstage -derive` asks the published catalogue, because a new bottle appears in
-go-pkgx/packages and no list in this repository can know. The oracle's list is pinned
-precisely so a confrontation cannot move because another repository published something.
+A second test guards the list of workflows itself: `TestEveryStagingWorkflowIsChecked`
+scans `.github/workflows/` for a staging step and fails on one it was not told about.
+That hole is not hypothetical — `hugo.yml` and `playground.yml` sat in it, using
+`-derive` while only `shim.yml` was checked.
 
 ### Every Go module is asked about vulnerabilities, not one named directory
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -72,6 +73,56 @@ func readManifest(t *testing.T, dir string) Manifest {
 		t.Fatal(err)
 	}
 	return m
+}
+
+// TestTheBudgetRefusesAndDoesNotTruncate is the test for the one behaviour
+// that must not be convenient.
+//
+// On 2026-10-31 a `-derive` run staged 35 modules weighing 441 MB where this
+// tool had been written for ~21 MB. A budget that staged the first N bytes
+// instead of refusing would have produced a short set with a VALID manifest
+// and a page that renders — exactly the failure `confront_test.go` exists to
+// catch one project at a time. So the assertions are: a non-zero exit, no
+// index.json at all, and the measurement in the message.
+func TestTheBudgetRefusesAndDoesNotTruncate(t *testing.T) {
+	out := t.TempDir()
+	store := t.TempDir()
+	withSeams(t, nil, nil)
+	write(t, filepath.Join(store, "sqlite.org/v3.53.4/bin/sqlite3.wasm"), wasmModule)
+	write(t, filepath.Join(store, "lua.org/v5.4.9/bin/lua.wasm"), wasmModule)
+
+	// One byte under two modules' worth, so the set is over budget and the
+	// first module alone would have fitted — the truncating implementation
+	// would exit 0 here.
+	budget := int64(2*len(wasmModule) - 1)
+	code, stdout, errb := drive(t, "-out", out, "-store", store,
+		"-max-bytes", strconv.FormatInt(budget, 10), "sqlite.org", "lua.org")
+	if code == 0 {
+		t.Fatalf("over budget and exited 0; stdout:\n%s", stdout)
+	}
+	if !strings.Contains(errb, "over the -max-bytes budget") {
+		t.Errorf("the refusal does not say why:\n%s", errb)
+	}
+	if !strings.Contains(errb, "NOTHING was truncated") {
+		t.Errorf("the refusal does not say the set was not trimmed:\n%s", errb)
+	}
+	// ⛔ The control that a truncating version would fail: no manifest.
+	if _, err := os.Stat(filepath.Join(out, "index.json")); err == nil {
+		t.Error("index.json was written for a set that was refused: a short manifest " +
+			"that looks complete is the whole failure mode")
+	}
+
+	// And the budget is not a wall: the same run under a budget that fits
+	// succeeds, so a green run proves the modules were acceptable rather than
+	// that the check was skipped.
+	code, _, errb = drive(t, "-out", out, "-store", store,
+		"-max-bytes", strconv.FormatInt(budget+1, 10), "sqlite.org", "lua.org")
+	if code != 0 {
+		t.Fatalf("within budget and refused: %s", errb)
+	}
+	if len(readManifest(t, out).Modules) != 2 {
+		t.Error("the within-budget run staged the wrong number of modules")
+	}
 }
 
 // The shape it exists for: the seven projects the wasip1 lanes publish, here
