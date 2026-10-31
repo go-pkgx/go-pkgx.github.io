@@ -1,5 +1,6 @@
 {
   "_comment": "Recorded from wasmtime, the reference implementation, by `go test ./tools/playground -update` with PLAYGROUND_WASM_DIR pointing at a tools/wasmstage tree. The arguments are the ones go-pkgx/packages runs before it publishes a bottle (wasip1.yml, wasip1-c.yml); argv[0] is pinned to the binary's name so a fixture cannot embed the machine it was recorded on. A sha256 that no longer matches says the MODULE moved, not the behaviour.",
+  "_withdrawn": "github.com/simdjson/simdjson v5.0.5 was confronted here until 2026-10-31 and is WITHDRAWN, not forgotten. Its tag serves two DIFFERENT modules at different times -- 87e24e89... then c946f9c5... then 87e24e89... again, measured four times in ten minutes with no publish of ours in between, identical behaviour and the same 432531 bytes each time. No sha256 can pin that: whichever one were recorded, this gate would be red about half the time, and a gate that is red for reasons outside its own repository teaches people to ignore red. Cause in go-pkgx/packages#393: the C/C++ lane builds each project on TWO hosts for the one wasip1/wasm target and BOTH jobs publish the same tag. For zlib.net, lua.org and sqlite.org the two hosts produce identical wasm, so writing the tag twice is invisible; for the only C++ project of the four they do not. RESTORE IT -- this entry and the name in all three staging workflows, in one commit -- as soon as that tag is stable, and prove it first by installing twice an hour apart and comparing. The seven modules that remain keep their 2026-10-30 hashes and are the control: if one of THEM ever disagrees, that is a new event and not this one.",
   "recorded": "2026-10-30T20:58:27Z",
   "wasmtime": "wasmtime 50.0.1 (c307ec81d 2026-10-29)",
   "guest_cwd": "/smoke",
@@ -109,22 +110,6 @@
       "want_exit": 0,
       "want_stdout": "H4sIAAAAAAAAA8tIzcnJVyhPLM4sMOQCALsOjmANAAAA",
       "want_stderr": ""
-    },
-    {
-      "name": "simdjson-minify",
-      "project": "github.com/simdjson/simdjson",
-      "version": "5.0.5",
-      "bin": "simdjson-minify",
-      "module": "github.com/simdjson/simdjson/simdjson-minify.wasm",
-      "sha256": "c946f9c5c53d5acd8f2a4ffe8c61ad422efd8ad1db620d3059069e37883aa691",
-      "args": [],
-      "files": {
-        "j.json": "eyAiYSIgOiBbMSwgMiBdIH0K"
-      },
-      "stdin": "eyAiYSIgOiBbMSwgMiBdIH0K",
-      "want_exit": 0,
-      "want_stdout": "eyJhIjpbMSwyXX0K",
-      "want_stderr": "aW1wbGVtZW50YXRpb246IGZhbGxiYWNrCg=="
     }
   ]
 }

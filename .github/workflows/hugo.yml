@@ -103,7 +103,7 @@ jobs:
         run: |
           go run . -out "$OUT" \
             filippo.io/age github.com/cpuguy83/go-md2man mvdan.cc/sh \
-            lua.org sqlite.org zlib.net github.com/simdjson/simdjson
+            lua.org sqlite.org zlib.net
 
       - name: Build
         env:
