@@ -1,66 +1,209 @@
-# Confront the playground's WASI shim with wasmtime.
+# Stage the registry's wasip1/wasm modules and publish the site carrying them.
 #
-# ⛔ THE PAGE BUILDING IS NOT EVIDENCE THE SHIM WORKS. A WASI host can write a
-# struct field at the wrong offset, return the wrong errno, or answer "success"
-# to a call it never implemented, and the page will render perfectly while the
-# module prints bytes nobody can check. The only thing that separates a working
-# shim from a convincing one is a second implementation answering the same
-# questions — so this runs all eight published modules under wasmtime, the
-# reference, and requires static/playground/wasi.js to produce the same stdout,
-# the same stderr and the same exit status.
+# ⛔ SCHEDULED, NOT ON PUSH, and that is the whole point. A new wasip1/wasm
+# bottle is published in go-pkgx/packages — a DIFFERENT repository — so a job
+# that fires on a push to THIS one cannot see the event that changes the
+# answer. tools/versioncheck's header makes exactly this argument about
+# version pins, and lost a week to it: on 2026-10-04 the site told visitors to
+# install pkgm v0.1.4 and pkgx v0.1.5 while the releases were v0.1.7 and
+# v0.1.10, and nothing anywhere said so. A hand-typed list of seven projects
+# would rot the same way, which is why `wasmstage -derive` asks the published
+# catalogue instead of reading a list out of this file.
 #
-# It is a FILE OF ITS OWN on purpose: tools/wasmstage and the staging step
-# belong to another change, and a new file cannot conflict with an edit to an
-# existing one.
+# ⛔ THE DERIVATION IS CONFRONTED, NOT JUST PARSED. A derivation that returns
+# a SUBSET of what exists is indistinguishable from a small catalogue, and no
+# test written against a fixture can tell them apart. The `confront` job below
+# compares the derived list against the factory's own lane files in
+# go-pkgx/packages. See tools/wasmstage/confront_test.go.
+#
+# ⛔ SILENCE IS NOT GREEN. GitHub disables a `schedule` trigger after 60 days
+# with no activity in the repository, and says so only in a one-off email to
+# the owner. So "the playground has not gone stale, there have been no red
+# runs" is not an observation about the modules; it may be an observation
+# about a cron that stopped firing in August. Whoever reads this should check
+# the run history has a recent entry, not merely that nothing is red.
+#
+# ⛔ NOTHING BINARY IS COMMITTED. The staged set is ~21 MB of .wasm, refreshed
+# weekly; committed, every refresh would stay in the history for good and the
+# clone would grow by that much a week forever. git has no eraser. So the
+# modules are produced HERE and travel in the Pages artifact, which is
+# replaced rather than appended to.
+#
+# ⛔ KNOWN GAP, SAID OUT LOUD. .github/workflows/hugo.yml also deploys this
+# site, on every push to main, and it does NOT stage. A Pages deployment
+# replaces the whole site, so the first content push after a refresh serves a
+# playground whose modules are gone until the next run here. The fix is one
+# step — the `stage the wasip1/wasm modules` step below, moved into hugo.yml
+# before its Build — and it is left to a follow-up because hugo.yml is outside
+# the scope of this change. Until it lands, a content push should be followed
+# by a `workflow_dispatch` of this workflow.
 
-name: Playground shim vs wasmtime
+name: stage the wasm playground
 
 on:
+  schedule:
+    # Monday, after the catalogue. go-pkgx/packages publishes the wasip1/wasm
+    # catalogue weekly at 05:00 UTC on Monday ('0 5 * * 1'); this runs ~100
+    # minutes later so it reads that run's output and not the previous week's.
+    # Weekly and not daily on purpose: the source of truth moves weekly, and a
+    # daily run would pull ~21 MB from ghcr for an answer that cannot have
+    # changed.
+    - cron: '40 6 * * 1'
+  workflow_dispatch:
+  # The Go half is checked on every change to it, because that needs no
+  # network and must not wait a week to go red. The STAGING is deliberately
+  # not here: it would make every pull request in this repository depend on
+  # ghcr being up, and it cannot pass at all until the catalogue's first
+  # weekly run has happened.
+  pull_request:
+    paths:
+      - 'tools/wasmstage/**'
+      - '.github/workflows/playground.yml'
   push:
     branches: [main]
-  pull_request:
-  workflow_dispatch:
+    paths:
+      - 'tools/wasmstage/**'
+      - '.github/workflows/playground.yml'
 
 permissions:
   contents: read
 
 jobs:
-  confront:
+  check:
+    name: the staging tool builds and its refusals hold
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
-          cache: false
-      - uses: bytecodealliance/actions/wasmtime/setup@v1
-
-      # Needs no modules and no registry: the fixture file is well formed, the
-      # page's scripts parse, the page's default command lines ARE the ones the
-      # fixtures were recorded from, and — the control — a syscall the shim
-      # does not implement is still visible to the guest and named in the
-      # diagnostics. Without that last one, "no diagnostics" would be
-      # indistinguishable from a diagnostic channel that does not work.
-      - name: the checks that need nothing staged
-        working-directory: tools/playground
-        run: go test -v ./...
-
-      # tools/wasmstage lands in its own pull request. Until it is on main,
-      # this step is absent rather than failing: a red check for a file that
-      # belongs to somebody else's change tells nobody anything.
-      - name: stage the modules from ghcr.io
-        if: hashFiles('tools/wasmstage/main.go') != ''
+          # Pinned, not `stable`. An unpinned toolchain changes the compiler
+          # under the repository with no commit to point at.
+          go-version: '1.27.3'
+      - name: gofmt
         working-directory: tools/wasmstage
-        run: |
-          go run . -out "$RUNNER_TEMP/staged" \
-            zlib.net lua.org sqlite.org filippo.io/age mvdan.cc/sh \
-            github.com/cpuguy83/go-md2man github.com/simdjson/simdjson
+        run: test -z "$(gofmt -l .)" || { gofmt -d .; exit 1; }
+      - name: vet
+        working-directory: tools/wasmstage
+        run: go vet ./...
+      - name: test
+        working-directory: tools/wasmstage
+        run: go test ./...
 
-      # ⛔ The confrontation itself. `-run` names both halves so a typo in a
-      # test name shows up as "no tests to run" rather than as a pass.
-      - name: wasmtime, then the shim, on the same eight modules
-        if: hashFiles('tools/wasmstage/main.go') != ''
-        working-directory: tools/playground
+  # ⛔ CONFRONT THE DERIVATION WITH THE FACTORY, AND DO NOT GATE ON IT.
+  #
+  # Every other test drives `-derive` against a catalogue the test itself
+  # wrote, so none of them can tell a correct derivation from one that
+  # silently returns a subset: six of seven projects yields a valid manifest,
+  # a page that renders and nothing red. This job asks go-pkgx/packages what
+  # its wasip1 lanes actually build (the matrix entries of wasip1.yml and
+  # wasip1-c.yml) and compares.
+  #
+  # It is a JOB OF ITS OWN, on purpose. The two sides can disagree benignly —
+  # a lane gains a project between two weekly catalogue runs — and making the
+  # refresh depend on that would freeze the playground for a week over a
+  # difference that fixes itself. A failure here turns the whole run red and
+  # mails the owner, which is the signal; the modules still refresh.
+  confront:
+    name: the catalogue agrees with the factory that builds the bottles
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.3'
+      - name: derived vs declared
+        working-directory: tools/wasmstage
+        # Reaches the registry and raw.githubusercontent.com, which is why it
+        # is opt-in and why it is not in the `check` job above.
         env:
-          PLAYGROUND_WASM_DIR: ${{ runner.temp }}/staged
-        run: go test -v -run 'TestWasmtimeMatchesFixtures|TestShimMatchesWasmtime' ./...
+          WASMSTAGE_CONFRONT: '1'
+        run: go test -v -run TestTheDerivedListMatchesWhatTheFactoryBuilds ./...
+
+  stage:
+    name: stage the modules and build the site around them
+    # Only the scheduled and manual runs stage: a pull request has no
+    # business pulling 21 MB from a registry, and until the catalogue's first
+    # weekly run exists it could not succeed if it tried.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      # Kept in step with .github/workflows/hugo.yml, which pins the same
+      # version for the same reason: a new Hugo release must not change this
+      # site by surprise. Two files name it; bump both.
+      HUGO_VERSION: 0.135.0
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.3'
+
+      - name: Install Hugo CLI
+        run: |
+          wget -O hugo.deb "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
+          sudo dpkg -i hugo.deb
+
+      # ⛔ -derive, NOT A LIST OF NAMES. The seven projects publishing
+      # wasip1/wasm bottles today are seven because that is what the
+      # catalogue says this week. If the catalogue cannot be read the step
+      # fails and the site is NOT republished -- the previously deployed page
+      # stays up, which is a page whose modules are a week old and whose
+      # manifest says when it was generated, rather than a fresh-looking page
+      # built from a list somebody typed in 2026.
+      - name: stage the wasip1/wasm modules
+        working-directory: tools/wasmstage
+        run: go run . -derive -out "${{ github.workspace }}/static/playground/modules"
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
+      # static/ is copied into public/ verbatim, so the modules staged above
+      # are served same-origin -- which is the entire reason they are staged
+      # at all: ghcr.io sends no access-control-allow-origin, so a page
+      # fetching a bottle directly fails in every browser and in no test.
+      - name: Build
+        env:
+          HUGO_ENVIRONMENT: production
+          HUGO_ENV: production
+        run: |
+          hugo \
+            --gc \
+            --minify \
+            --baseURL "${{ steps.pages.outputs.base_url }}/"
+
+      # The control: the manifest has to be in the built site, not merely in
+      # the working tree. A `static` mount that moved, or a Hugo config that
+      # excludes it, would otherwise deploy a site whose playground 404s --
+      # and a 404 at fetch time is read by a visitor, not by us.
+      - name: the manifest reached the built site
+        run: test -s public/playground/modules/index.json
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./public
+
+  deploy:
+    name: publish
+    needs: stage
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # The same group hugo.yml uses, so a scheduled refresh and a push-driven
+    # deploy queue instead of racing for the one thing they both replace.
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

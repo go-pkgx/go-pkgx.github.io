@@ -26,10 +26,13 @@ func stagedDir(t *testing.T) string {
 	t.Helper()
 	dir := os.Getenv("PLAYGROUND_WASM_DIR")
 	if dir == "" {
-		t.Skip("PLAYGROUND_WASM_DIR is not set: stage the modules first " +
-			"(cd tools/wasmstage && go run . -out <dir> zlib.net lua.org sqlite.org " +
-			"filippo.io/age mvdan.cc/sh github.com/cpuguy83/go-md2man github.com/simdjson/simdjson). " +
-			"A SKIP here is not a pass — nothing was confronted.")
+		// The names come from the fixtures, not from a copy in this string. A
+		// fourth hand-typed list would be one more thing to forget, and this
+		// one is read by whoever is trying to run the tests at all.
+		t.Skipf("PLAYGROUND_WASM_DIR is not set: stage the modules first "+
+			"(cd tools/wasmstage && go run . -out <dir> %s). "+
+			"A SKIP here is not a pass — nothing was confronted.",
+			strings.Join(fixtureProjects(t), " "))
 	}
 	return dir
 }

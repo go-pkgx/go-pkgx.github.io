@@ -30,9 +30,10 @@ Three things about it are load-bearing:
   itself and requires the bytes to match. Running it:
 
   ```sh
-  cd tools/wasmstage && go run . -out /tmp/staged \
-      zlib.net lua.org sqlite.org filippo.io/age mvdan.cc/sh \
-      github.com/cpuguy83/go-md2man github.com/simdjson/simdjson
+  # The project names are NOT repeated here. Run the tests with nothing staged and the
+  # skip message prints them, read out of the fixtures themselves -- see below for why.
+  cd tools/playground && go test ./...
+  cd ../wasmstage && go run . -out /tmp/staged <the names it printed>
   cd ../playground && PLAYGROUND_WASM_DIR=/tmp/staged go test ./...   # add -update to re-record
   ```
 
@@ -40,6 +41,28 @@ Three things about it are load-bearing:
   is not a pass. The one difference the confrontation has caught so far: sqlite3 printed a
   233-byte box-drawing table where wasmtime printed `3.53.4`, because `fd_fdstat_get`
   reported stdout as a terminal. `isatty()` is literally those bits.
+
+### Two lists, kept equal by a test
+
+The modules the confrontation runs are named twice — in `testdata/fixtures.json` and in
+the staging step of `.github/workflows/shim.yml` — and neither failure of the pair is
+legible on its own. A fixture with no name in the workflow fails several steps later on a
+missing path, which reads like a staging bug; a name with no fixture pulls 21 MB and runs
+nothing, passing every assertion. `TestTheStagedProjectsAreTheConfrontedOnes` parses the
+workflow and requires the two sets to be equal, naming which side is short.
+
+The staged list for the **deployed page** is a different thing and is *not* pinned:
+`wasmstage -derive` asks the published catalogue, because a new bottle appears in
+go-pkgx/packages and no list in this repository can know. The oracle's list is pinned
+precisely so a confrontation cannot move because another repository published something.
+
+### Two workflows deploy this site, and both stage
+
+`.github/workflows/playground.yml` refreshes the modules weekly; `hugo.yml` deploys on
+every push to `main`. A Pages deployment **replaces the whole site**, so for as long as
+only the first one staged, the next content push served a playground whose modules were
+gone — a page that renders, an `index.json` that 404s, and a green deployment. Both now
+stage before building, and both assert the manifest reached `public/`.
 
 ## The stylesheet takes its colours as parameters
 
