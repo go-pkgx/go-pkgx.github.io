@@ -56,6 +56,30 @@ The staged list for the **deployed page** is a different thing and is *not* pinn
 go-pkgx/packages and no list in this repository can know. The oracle's list is pinned
 precisely so a confrontation cannot move because another repository published something.
 
+### Every Go module is asked about vulnerabilities, not one named directory
+
+`tools/vulnmods` discovers every `go.mod` under the repository and hands each
+module's `govulncheck` report to `vulngate`. It replaced a workflow step that
+named `tools/versioncheck` — correctly, for reasons its header still explains —
+written when that was the only Go module here. By the time the playground
+landed there were four, and `tools/wasmstage` (an OCI client, `x/crypto`, two
+decompressors, and the module whose output is deployed) had never been scanned.
+
+Two behaviours are the point:
+
+- **A module whose `go list ./...` matches no packages is skipped, with that
+  reason printed.** The root module is one: its only `.go` file is `kit.go`,
+  behind `//go:build tools`, which exists so `go mod tidy` does not delete the
+  landingkit requirement. Measuring the package count is deliberate —
+  classifying it from `vulngate`'s refusal would mean reading "the scan did not
+  run" and deciding it was fine, and a module that has *stopped building*
+  produces exactly the same refusal.
+- **A run in which no module was actually scanned fails.** "Everything was
+  skipped" and "nothing was found" must not look alike.
+
+It belongs in `go-fleettools/fleettools` the moment a second repository needs
+it; it is here because one does.
+
 ### Two workflows deploy this site, and both stage
 
 `.github/workflows/playground.yml` refreshes the modules weekly; `hugo.yml` deploys on
