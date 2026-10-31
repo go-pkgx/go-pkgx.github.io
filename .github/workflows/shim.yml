@@ -1,0 +1,89 @@
+# Confront the playground's WASI shim with wasmtime.
+#
+# ⛔ THE PAGE BUILDING IS NOT EVIDENCE THE SHIM WORKS. A WASI host can write a
+# struct field at the wrong offset, return the wrong errno, or answer "success"
+# to a call it never implemented, and the page will render perfectly while the
+# module prints bytes nobody can check. The only thing that separates a working
+# shim from a convincing one is a second implementation answering the same
+# questions — so this runs every published module under wasmtime, the
+# reference, and requires static/playground/wasi.js to produce the same stdout,
+# the same stderr and the same exit status.
+#
+# ⛔ A FILE OF ITS OWN, and not because of a merge. playground.yml refreshes the
+# modules weekly and deploys; it fires on a `schedule` because the event that
+# changes its answer happens in go-pkgx/packages. This fires when the SHIM
+# changes, which is an event in this repository. One trigger set cannot serve
+# both: on playground.yml's schedule this would run 51 times a year against a
+# shim nobody touched, and on this file's paths that one would pull 21 MB for a
+# page that is not being redeployed.
+#
+# ⛔ THE PATHS ARE THE ANSWER TO "EVERY PR DEPENDS ON ghcr". The staged halves
+# do reach the registry, so this runs only for changes to the shim, the page or
+# the harness. A pull request that touches neither never starts this workflow.
+
+name: Playground shim vs wasmtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'static/playground/**'
+      - 'tools/playground/**'
+      - '.github/workflows/shim.yml'
+  pull_request:
+    paths:
+      - 'static/playground/**'
+      - 'tools/playground/**'
+      - '.github/workflows/shim.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  confront:
+    name: wasmtime and the shim answer alike
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: bytecodealliance/actions/wasmtime/setup@v1
+
+      # Needs no modules and no registry: the fixture file is well formed, the
+      # page's scripts parse, the page's default command lines ARE the ones the
+      # fixtures were recorded from, the staging list below agrees with the
+      # fixtures, and — the control — a syscall the shim does not implement is
+      # still visible to the guest and named in the diagnostics. Without that
+      # last one, "no diagnostics" would be indistinguishable from a diagnostic
+      # channel that does not work.
+      - name: the checks that need nothing staged
+        working-directory: tools/playground
+        run: go test -v ./...
+
+      # ⛔ THE PROJECT NAMES ARE NOT A SECOND LIST. They are the fixtures'
+      # projects, and TestTheStagedProjectsAreTheConfrontedOnes parses THIS
+      # FILE and refuses to agree unless the two sets are equal — so a fixture
+      # added without a name added here goes red in the step above, before the
+      # staging that would have failed on a missing file.
+      #
+      # `-derive` is deliberately not used: it asks the weekly catalogue, and a
+      # confrontation whose work set moves because another repository published
+      # something cannot be bisected. The staging list for the DEPLOYED page is
+      # derived (playground.yml); the list for the ORACLE is pinned.
+      - name: stage the modules the fixtures name
+        working-directory: tools/wasmstage
+        run: |
+          go run . -out "$RUNNER_TEMP/staged" \
+            filippo.io/age github.com/cpuguy83/go-md2man mvdan.cc/sh \
+            lua.org sqlite.org zlib.net github.com/simdjson/simdjson
+
+      # ⛔ The confrontation itself. `-run` names both halves so a typo in a
+      # test name shows up as "no tests to run" rather than as a pass.
+      - name: wasmtime, then the shim, on the same modules
+        working-directory: tools/playground
+        env:
+          PLAYGROUND_WASM_DIR: ${{ runner.temp }}/staged
+        run: go test -v -count=1 -run 'TestWasmtimeMatchesFixtures|TestShimMatchesWasmtime' ./...

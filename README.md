@@ -8,6 +8,62 @@ design system, `layouts/partials/theme-toggle.html` for the three-way theme
 toggle (system / light / dark, defaulting to system), and a `layouts/index.html`
 whose repo cards are drawn from `[[params.repos]]` in `hugo.toml`.
 
+## The playground, at `/playground/`
+
+`content/playground.md` + `layouts/_default/playground.html` + `static/playground/`
+run the factory's `wasip1/wasm` bottles **in the reader's browser**: `wasi.js` is a
+WASI preview1 host, `presets.js` holds one proven command line per module, and
+`app.js` is the page.
+
+Three things about it are load-bearing:
+
+- **It never fetches a registry.** `ghcr.io` sends no CORS headers, so the modules are
+  staged into `static/playground/modules/` during the build by `tools/wasmstage`, and
+  the page reads `index.json` from this site. **No `.wasm` is committed**; `.gitignore`
+  keeps the staged tree out.
+- **A syscall the host does not implement returns `ENOSYS` and names itself on the
+  page.** Never 0: a run that silently skipped a call and exited cleanly is
+  indistinguishable from one that worked.
+- **It is confronted with `wasmtime`, not asserted.** `tools/playground` runs all eight
+  modules under the reference implementation, records stdout, stderr and the exit status
+  in `testdata/fixtures.json`, then runs the same modules through `static/playground/wasi.js`
+  itself and requires the bytes to match. Running it:
+
+  ```sh
+  # The project names are NOT repeated here. Run the tests with nothing staged and the
+  # skip message prints them, read out of the fixtures themselves -- see below for why.
+  cd tools/playground && go test ./...
+  cd ../wasmstage && go run . -out /tmp/staged <the names it printed>
+  cd ../playground && PLAYGROUND_WASM_DIR=/tmp/staged go test ./...   # add -update to re-record
+  ```
+
+  Without `PLAYGROUND_WASM_DIR`, `wasmtime` or `node`, those tests **skip** — and a skip
+  is not a pass. The one difference the confrontation has caught so far: sqlite3 printed a
+  233-byte box-drawing table where wasmtime printed `3.53.4`, because `fd_fdstat_get`
+  reported stdout as a terminal. `isatty()` is literally those bits.
+
+### Two lists, kept equal by a test
+
+The modules the confrontation runs are named twice — in `testdata/fixtures.json` and in
+the staging step of `.github/workflows/shim.yml` — and neither failure of the pair is
+legible on its own. A fixture with no name in the workflow fails several steps later on a
+missing path, which reads like a staging bug; a name with no fixture pulls 21 MB and runs
+nothing, passing every assertion. `TestTheStagedProjectsAreTheConfrontedOnes` parses the
+workflow and requires the two sets to be equal, naming which side is short.
+
+The staged list for the **deployed page** is a different thing and is *not* pinned:
+`wasmstage -derive` asks the published catalogue, because a new bottle appears in
+go-pkgx/packages and no list in this repository can know. The oracle's list is pinned
+precisely so a confrontation cannot move because another repository published something.
+
+### Two workflows deploy this site, and both stage
+
+`.github/workflows/playground.yml` refreshes the modules weekly; `hugo.yml` deploys on
+every push to `main`. A Pages deployment **replaces the whole site**, so for as long as
+only the first one staged, the next content push served a playground whose modules were
+gone — a page that renders, an `index.json` that 404s, and a green deployment. Both now
+stage before building, and both assert the manifest reached `public/`.
+
 ## The stylesheet takes its colours as parameters
 
 `go-authn` and `go-fileshare` carry byte-identical copies of this stylesheet

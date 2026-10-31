@@ -60,6 +60,28 @@ jobs:
         id: pages
         uses: actions/configure-pages@v6
 
+      # ⛔ A PAGES DEPLOYMENT REPLACES THE WHOLE SITE. Without this step, the
+      # first content push after playground.yml's weekly refresh served a
+      # playground whose modules were simply gone — a page that renders, a
+      # fetch of /playground/modules/index.json that 404s, and nothing red
+      # anywhere, because the deployment itself succeeded. playground.yml said
+      # so in its header and left the fix to a follow-up; this is it.
+      #
+      # Only on a run that will DEPLOY. A pull request stops after build, so
+      # staging there would pull ~21 MB from ghcr.io to build a site nobody
+      # serves — which is the objection playground.yml raises against staging
+      # on pull requests, and it holds here too.
+      #
+      # It is a HARD failure on purpose. If the catalogue or the registry
+      # cannot be reached, this run does not deploy and the previously served
+      # site — modules and all — stays up. Stale and whole beats fresh and
+      # amputated; `continue-on-error` here would reinstate exactly the bug
+      # this step closes.
+      - name: Stage the wasip1/wasm playground modules
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        working-directory: tools/wasmstage
+        run: go run . -derive -out "${{ github.workspace }}/static/playground/modules"
+
       - name: Build
         env:
           HUGO_ENVIRONMENT: production
@@ -69,6 +91,15 @@ jobs:
             --gc \
             --minify \
             --baseURL "${{ steps.pages.outputs.base_url }}/"
+
+      # The control for the step above: the manifest has to be in the BUILT
+      # site, not merely in the working tree. A `static` mount that moved, or a
+      # Hugo config that excludes it, would otherwise deploy a site whose
+      # playground 404s — and a 404 at fetch time is read by a visitor, not by
+      # us. Same assertion playground.yml makes, for the same reason.
+      - name: The manifest reached the built site
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: test -s public/playground/modules/index.json
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
