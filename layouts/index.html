@@ -107,38 +107,44 @@ irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
     <h2>A tree you can walk, offline, in an empty image.</h2>
     <p class="lead">nix, guix and spack all let you browse what exists before you install it. Here the same thing works where none of them run: a single static binary, a catalogue cached as one file, and no network after the first fetch. <code>&lt;TAB&gt;</code> answers in <b>3.8&nbsp;ms</b> — median of 300 runs in a <code>FROM scratch</code> container with the network off, measured 2026-10-11 against a floor of 3.05&nbsp;ms for starting the process at all — because nothing on that path opens a socket, and because since v0.16.0 it reads a 38&nbsp;KB name index instead of decoding the 470&nbsp;KB catalogue.</p>
     <div class="term">
-      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">pkgx — zsh</span></div>
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">pkgs — zsh</span></div>
 <pre><span class="c-com"># once, with a network. Then never again.</span>
-<span class="c-cmd">$</span> pkgx catalog update
-1908 project(s) → ~/.pkgx/catalog/linux-x86-64.json
+<span class="c-cmd">$</span> pkgs catalog update
+1965 project(s) → ~/.pkgx/catalog/linux-x86-64.json
+1965 name(s) → ~/.pkgx/catalog/linux-x86-64.names (what tab-completion reads)
 
 <span class="c-com"># a namespace lists what it CONTAINS, a package what it NEEDS</span>
-<span class="c-cmd">$</span> pkgx ls --tree curl.se
-curl.se — 8.17.0  ✓
-  curl.se/ca-certs  2026.09.25  ✓
-  doxygen.nl  (no bottle here)
-  openssl.org  3.6.0  ✓ 3.5.1
+<span class="c-cmd">$</span> pkgs ls --tree curl.se
+curl.se — 8.20  ✓
+  curl.se/ca-certs  2026.10.20  ✓ 2026.09.25
+  nghttp2.org  1.70.0  ✓
+  openssl.org  4.0.2  ✓ 3.6.4
+    curl.se/ca-certs  (shown above)
+  zlib.net  1.3.2  ✓
+
+also a namespace, 3 under it: pkgs ls curl.se/
 
 <span class="c-com"># you know the command, not the package</span>
-<span class="c-cmd">$</span> pkgx search rg
-crates.io/ripgrep                        rg  14.1.1
+<span class="c-cmd">$</span> pkgs search rg
+crates.io/ripgrep                        rg  15.2.0  ✓ 15.1.0
 
 <span class="c-com"># and the other direction: who NEEDS this, before you change it</span>
-<span class="c-cmd">$</span> pkgx ls --dependents openssl.org | wc -l
-164
+<span class="c-cmd">$</span> pkgs ls --dependents openssl.org
+…
+runtime dependents on linux/x86-64; a build-only user is in no catalogue
 
-<span class="c-cmd">$</span> pkgx why git-scm.org zlib.net
-git-scm.org — 2.55.0
-  → zlib.net — 1.3.2
+<span class="c-cmd">$</span> pkgs why git-scm.org zlib.net
+git-scm.org — 2.55.0  ✓ 2.47.1
+  → zlib.net — 1.3.2  ✓
 </pre>
     </div>
     <div class="cards" style="margin-top:14px">
       <div class="card"><div class="ico">🌳</div><h3>A node has two kinds of thing under it</h3><p><code>gnu.org</code> contains <code>gnu.org/bash</code> because of how it is <b>named</b>; <code>curl.se</code> has <code>openssl.org</code> under it because of what it <b>needs</b>. nix and guix keep the two in separate commands; here the node decides, because the person typing already knows which they named.</p></div>
       <div class="card"><div class="ico">⌨️</div><h3>The binary answers &lt;TAB&gt;</h3><p>Spack generates a completion file and commits it — <code>spack-completion.bash</code> says &ldquo;auto-generated&hellip; please do not manually modify&rdquo; in its own header — and keeps it honest with a test called <code>test_updated_completion_scripts</code>. guix hand-writes one per shell: three files, 9&nbsp;KB of bash, 33&nbsp;KB of zsh, 78&nbsp;KB of fish, each with its own authors and no generator to compare against. Nix has the binary answer — <code>NIX_GET_COMPLETIONS</code> carries the argument index, in <code>src/libutil/args.cc</code> — and so does this — because what is being completed is the <b>registry</b>, which changes without the binary changing, and because there is no completion framework in an empty image.</p></div>
-      <div class="card"><div class="ico">🔭</div><h3>Everything is named; what is here is marked</h3><p>A catalogue is published <b>per platform</b>: 537 of 1908 projects have no bottle for darwin/aarch64. Dropping those names would say they do not exist, which is false. Marking them says what to build next.</p></div>
-      <div class="card"><div class="ico">🖥️</div><h3>And a full-screen browser</h3><p><code>pkgx browse</code> walks it with the arrow keys, <code>/</code> searches, space pins — and <code>q</code> prints what you pinned on stdout, so <code>pkgx +$(pkgx browse)</code> composes. <code>tab</code> cycles <b>three</b> views of the node you are standing on: what it <b>contains</b>, what it <b>needs</b>, and who <b>needs it</b>. Without a terminal it prints the tree and exits.</p></div>
-      <div class="card"><div class="ico">💾</div><h3>And what it has cost you</h3><p>A <code>✓</code> is per project; <code>pkgx store</code> is the whole disk. One developer's machine on 2026-10-08: <b>41.2&nbsp;GiB</b> over 363 versions of 302 projects, <b>13 versions of gohugo.io</b>, 12.8&nbsp;GiB in versions that are not the newest present. Every ephemeral run leaves its bottles behind and nothing removes one. It <b>reports and deletes nothing</b> — there is no profile here, so no roots, and nix, guix and spack all draw that line too.</p></div>
-      <div class="card"><div class="ico">↩️</div><h3>The two questions that do not descend</h3><p><code>ls --dependents</code> asks who <b>needs</b> this — the question before <b>changing</b> something, where every tree above answers the one before installing. <b>164</b> of 1908 projects need openssl on linux/aarch64, 854 transitively; on darwin/aarch64 it is 153 and 789, because a catalogue records what a platform really carries. <code>pkgx why A B</code> is Nix's third question: not what is in the closure but which link put it there, as a <b>shortest</b> path.</p></div>
+      <div class="card"><div class="ico">🔭</div><h3>Everything is named; what is here is marked</h3><p>A catalogue is published <b>per platform</b>: 537 of 1908 projects had no bottle for darwin/aarch64 on the 2026-10-06 catalogue above — the registry publishes 1965 today. Dropping those names would say they do not exist, which is false. Marking them says what to build next.</p></div>
+      <div class="card"><div class="ico">🖥️</div><h3>And a full-screen browser</h3><p><code>pkgs browse</code> walks it with the arrow keys, <code>/</code> searches, space pins — and <code>q</code> prints what you pinned on stdout, so <code>pkgx +$(pkgs browse)</code> composes. <code>tab</code> cycles <b>three</b> views of the node you are standing on: what it <b>contains</b>, what it <b>needs</b>, and who <b>needs it</b>. Without a terminal it prints the tree and exits.</p></div>
+      <div class="card"><div class="ico">💾</div><h3>And what it has cost you</h3><p>A <code>✓</code> is per project; <code>pkgs store</code> is the whole disk. One developer's machine on 2026-10-08: <b>41.2&nbsp;GiB</b> over 363 versions of 302 projects, <b>13 versions of gohugo.io</b>, 12.8&nbsp;GiB in versions that are not the newest present. Every ephemeral run leaves its bottles behind and nothing removes one. It <b>reports and deletes nothing</b> — there is no profile here, so no roots, and nix, guix and spack all draw that line too.</p></div>
+      <div class="card"><div class="ico">↩️</div><h3>The two questions that do not descend</h3><p><code>ls --dependents</code> asks who <b>needs</b> this — the question before <b>changing</b> something, where every tree above answers the one before installing. <b>164</b> of 1908 projects needed openssl on linux/aarch64 and 854 transitively, against 153 and 789 on darwin/aarch64 — same 2026-10-06 catalogue — because a catalogue records what a platform really carries. <code>pkgs why A B</code> is Nix's third question: not what is in the closure but which link put it there, as a <b>shortest</b> path.</p></div>
     </div>
   </div></section>
 
@@ -155,10 +161,10 @@ git-scm.org — 2.55.0
   <section id="modules"><div class="wrap">
     <span class="eyebrow">Environments and HPC</span>
     <h2>A module system, without Lmod.</h2>
-    <p class="lead">A module system does two things: it resolves what a package needs, and it edits your shell. <code>pkgx +a +b</code> already did the first. <code>pkge</code> does the second — a front-end shaped like Lmod's, over pkgx's own resolution, with no Lua interpreter and no modulefile tree. It ships inside the pkgx binary; there is nothing else to install.</p>
+    <p class="lead">A module system does two things: it resolves what a package needs, and it edits your shell. <code>pkgx +a +b</code> already did the first. <code>pkge</code> does the second — a front-end shaped like Lmod's, over pkgx's own resolution, with no Lua interpreter and no modulefile tree. It ships inside the <code>pkgs</code> binary — <code>eval "$(pkgs env init)"</code> defines it; there is nothing else to install.</p>
     <div class="term">
       <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">pkge — zsh</span></div>
-<pre><span class="c-cmd">$ eval</span> "$(pkgx env init)"          <span class="c-com"># in a profile</span>
+<pre><span class="c-cmd">$ eval</span> "$(pkgs env init)"          <span class="c-com"># in a profile</span>
 <span class="c-cmd">$ pkge load</span> stedolan.github.io/jq
 <span class="c-cmd">$ command -v</span> jq
 <span class="c-out">~/.pkgx/stedolan.github.io/jq/v1.8.2/bin/jq</span>
@@ -169,7 +175,7 @@ git-scm.org — 2.55.0
     <div class="grid">
       <div class="card"><div class="ico">↩️</div><h3>Unloading is exact</h3><p>Because loading never edits incrementally: it restores the environment it first saw and recomposes from the whole spec set. So <code>unload b</code> after <code>load a b c</code> leaves precisely what <code>load a c</code> would have — whatever order things happened in.</p></div>
       <div class="card"><div class="ico">🤝</div><h3>It defers to a real Lmod</h3><p>Where a site already runs one, publish modulefiles — <code>pkgx --modulefile +openmpi.org@5</code> — and let the site's own Lmod load them, so conflicts, hierarchies and <code>spider</code> keep working.</p></div>
-      <div class="card"><div class="ico">🚫</div><h3>And refuses to shadow it</h3><p><code>pkgx env init --module</code> defines <code>module</code> and <code>ml</code> only where there is no Lmod. Two implementations answering one command is how a support ticket becomes unanswerable.</p></div>
+      <div class="card"><div class="ico">🚫</div><h3>And refuses to shadow it</h3><p><code>pkgs env init --module</code> defines <code>module</code> and <code>ml</code> only where there is no Lmod. Two implementations answering one command is how a support ticket becomes unanswerable.</p></div>
     </div>
   </div></section>
 
@@ -181,6 +187,7 @@ git-scm.org — 2.55.0
       <div class="card"><div class="ico">🔏</div><h3>Fail-closed by default</h3><p>Each bottle carries, as OCI referrers, a CycloneDX SBOM, an in-toto SLSA provenance statement and a cosign-style signature verified against a pinned key. On install <code>PKGX_VERIFY=1</code> refuses an unsigned or badly-signed bottle.</p></div>
       <div class="card"><div class="ico">📥</div><h3>What went in, not only what came out</h3><p>The provenance records the source archive's SHA-256 (or a git commit) as well as the artefact. Over half this pantry builds from tarballs GitHub <i>generates</i> on request rather than stores, so for those it is the first stored record they have ever had.</p></div>
       <div class="card"><div class="ico">🧱</div><h3>Built where nothing leaks in</h3><p>Linux builds run inside a FROM-scratch rootfs staged from bottles — no distribution libc and no distribution compiler take part. The output carries its <code>PT_INTERP</code> into the pkgx prefix and no distribution strings at all.</p></div>
+      <div class="card"><div class="ico">🪦</div><h3>An abandoned release line is not a CVE</h3><p>A CVE feed answers <i>what is known to be wrong</i>. A line upstream has abandoned has nothing known about it, because nobody is looking and no fix is coming — so a clean scan is exactly what you get. <code>^3</code> used to mean "the newest 3.x", and on <b>2026-11-01</b> that was openssl <b>3.6.4</b>, whose line reached its end of life <i>that day</i>, while the 3.5 LTS sat in the same registry supported to <b>2030-04-08</b>. Since pkgx v0.30.0 the resolver prefers a supported line: <code>^3</code> gives <b>3.5.8</b>. A <b>rank</b>, not a filter — <code>=3.6.4</code> and every lock still resolve, and say so on stderr, because reproducibility outranks the preference. Of the nine openssl lines this registry publishes, seven are end-of-life.</p></div>
       <div class="card"><div class="ico">🔑</div><h3>No long-lived credential</h3><p>Publishing uses the workflow's native <code>GITHUB_TOKEN</code>, never a personal token, and every <code>(project, version, platform)</code> already present is skipped, so the catalogue grows progressively rather than being rebuilt.</p></div>
     </div>
   </div></section>
