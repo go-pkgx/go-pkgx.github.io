@@ -47,7 +47,7 @@ disableKinds = ["taxonomy", "term", "RSS", "sitemap", "404"]
   pkg = "github.com/go-pkgx/pkgm"
   url = "https://github.com/go-pkgx/pkgm"
   status = "ready"
-  blurb = "The **installer**. Resolves a package's runtime closure from the pkgx pantry, downloads the bottles, and installs them — mirroring the reference pkgm CLI (`install`/`uninstall`/`shim`/`list`/`outdated`/`update`/`pin`) as a **drop-in replacement**, plus a `run` that completes the closure from ELF `DT_NEEDED` and runs it on **`FROM scratch`**."
+  blurb = "The **installer**. Resolves a package's runtime closure from the pkgx pantry, downloads the bottles, and installs them — mirroring the reference pkgm CLI (`install`/`uninstall`/`shim`/`list`/`outdated`/`update`/`pin`) as a **drop-in replacement**, plus a `run` that completes the closure from ELF `DT_NEEDED` and runs it on **`FROM scratch`**, and `install --lock` to install **exactly** the versions a `bk lock` pins — every pin, resolving nothing."
 
 [[params.repos]]
   name = "bottle"
