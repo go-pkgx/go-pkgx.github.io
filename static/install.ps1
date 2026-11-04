@@ -5,7 +5,7 @@
 .DESCRIPTION
   Run:
 
-      $env:ZPKGM_VERSION='v0.9.0'; irm https://go-zpkg.github.io/install.ps1 | iex
+      $env:ZPKGM_VERSION='v0.10.0'; irm https://go-zpkg.github.io/install.ps1 | iex
       irm https://go-zpkg.github.io/install.ps1 | iex                 # zpkgm, latest
       $env:ZPKG_TOOL='zpkgx'; irm https://go-zpkg.github.io/install.ps1 | iex
 
