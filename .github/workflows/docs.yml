@@ -1,7 +1,7 @@
 # Does this organisation advertise what it has?
 #
 # The landing drifts silently: a repository is created, and nothing in any
-# repository fails because no page mentions it. go-pkgx had nine modules and
+# repository fails because no page mentions it. go-zpkg had nine modules and
 # named five — including registry-viewer, which draws this very site's package
 # tree.
 #

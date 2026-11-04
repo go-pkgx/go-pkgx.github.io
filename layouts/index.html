@@ -4,25 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ .Site.Title }} — the pkgx world in pure Go, running on FROM scratch</title>
-<meta name="description" content="go-pkgx — the pkgx world in pure Go (CGO_ENABLED=0): a runtime (pkgx), an installer (pkgm) and the bottle backend they share. Single static binaries with no libc of their own, so they run on a literally empty FROM scratch image and materialise real packages there. Plus a signed, attested bottle registry built by a CGO-free factory.">
+<meta name="description" content="go-zpkg — the pkgx world in pure Go (CGO_ENABLED=0): a runtime (zpkgx), an installer (zpkgm) and the bottle backend they share. Single static binaries with no libc of their own, so they run on a literally empty FROM scratch image and materialise real packages there. Plus a signed, attested bottle registry built by a CGO-free factory.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 {{ partial "styles.html" . }}
 {{ partial "site-styles.html" . }}
 </head>
 <body class="lm">
   <header class="nav"><div class="wrap">
-    <a class="brand" href="/"><img class="glyph" src="/img/logo.svg" width="32" height="32" alt="go-pkgx logo"> go-pkgx</a>
+    <a class="brand" href="/"><img class="glyph" src="/img/logo.svg" width="32" height="32" alt="go-zpkg logo"> go-zpkg</a>
     {{/* /playground/ is a page, not an anchor: a page nobody can reach from
          here is a page nobody reaches. */}}
     <nav><a href="#install">Install</a><a href="#features">Why</a><a href="#browse">Browse</a><a href="#lock">Lock</a><a href="#modules">Modules</a><a href="#registry">Registry</a><a href="{{ "playground/" | relURL }}">Playground</a></nav>
     {{ partial "theme-toggle.html" . }}
   </div></header>
-  {{ partial "fork-ribbon.html" "https://github.com/go-pkgx/pkgx" }}
+  {{ partial "fork-ribbon.html" "https://github.com/go-zpkg/zpkgx" }}
 
   <div class="hero"><div class="wrap">
     <div>
       <h1 class="head">No libc of its own,<br><span class="accent">so there is nowhere it cannot run.</span></h1>
-      <p class="sub">The pkgx world rebuilt in pure <code>CGO_ENABLED=0</code> Go: a <b>runtime</b> that runs packages on the fly, an <b>installer</b> that mirrors the reference CLI, and the <b>bottle backend</b> they share. The reference tools shell out to pkgx + deno + curl + openssl + xz — on the order of <b>515&nbsp;MB</b> of runtime closure — a figure this page has carried without a date or an instrument beside it, unlike every other number here, and it is the one claim about somebody else's software that nobody has re-measured. These replace all of it with single <b>9.1&nbsp;MB</b> static binaries that need no libc at all, so they run on a literally empty <code>FROM scratch</code> image and materialise real packages there. BSD-3-Clause.</p>
+      <p class="sub">The pkgx world rebuilt in pure <code>CGO_ENABLED=0</code> Go: a <b>runtime</b> that runs packages on the fly, an <b>installer</b> that mirrors the reference CLI, and the <b>bottle backend</b> they share. The reference tools shell out to zpkgx + deno + curl + openssl + xz — on the order of <b>515&nbsp;MB</b> of runtime closure — a figure this page has carried without a date or an instrument beside it, unlike every other number here, and it is the one claim about somebody else's software that nobody has re-measured. These replace all of it with single <b>9.1&nbsp;MB</b> static binaries that need no libc at all, so they run on a literally empty <code>FROM scratch</code> image and materialise real packages there. BSD-3-Clause.</p>
       <div class="cta">
         <a class="btn btn-primary" href="#install">{{ partial "icons/arrow-right.html" . }}Install in one line →</a>
       </div>
@@ -33,18 +33,18 @@
     </div>
     <div class="term">
       <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">FROM scratch — zsh</span></div>
-<pre><span class="c-com"># an image whose ONLY file is the pkgx binary</span>
+<pre><span class="c-com"># an image whose ONLY file is the zpkgx binary</span>
 <span class="c-cmd">FROM</span> scratch
-<span class="c-cmd">COPY</span> pkgx /bin/pkgx
-<span class="c-cmd">ENV</span> PKGX_DIR=/pkgx
-<span class="c-cmd">ENTRYPOINT</span> ["/bin/pkgx"]
+<span class="c-cmd">COPY</span> zpkgx /bin/zpkgx
+<span class="c-cmd">ENV</span> ZPKG_DIR=/zpkgx
+<span class="c-cmd">ENTRYPOINT</span> ["/bin/zpkgx"]
 
 <span class="c-com"># there is no shell in there, and no libc either</span>
-<span class="c-cmd">$ docker run</span> --rm pkgx-scratch gnu.org/wget --version
+<span class="c-cmd">$ docker run</span> --rm zpkgx-scratch gnu.org/wget --version
 <span class="c-out">GNU Wget 1.25.0 built on linux-gnu.</span>
 
 <span class="c-com"># bring several packages into one environment</span>
-<span class="c-cmd">$ docker run</span> --rm pkgx-scratch +sqlite.org -- sqlite3 --version
+<span class="c-cmd">$ docker run</span> --rm zpkgx-scratch +sqlite.org -- sqlite3 --version
 <span class="c-out">3.53.4 2026-07-24 …</span></pre>
     </div>
   </div></div>
@@ -58,28 +58,28 @@
     <span class="eyebrow">Install</span>
     <h2>One line, and it names a version on purpose.</h2>
     <p class="lead">It downloads the static binary for your os/arch from a named GitHub release, verifies it against that release's <code>SHA256SUMS</code>, and puts it on your <code>PATH</code>. A line copied today and the same line copied in six months install the same bytes — and a bad release does not reach everyone who happens to install that hour.</p>
-    <p class="lead"><code>pkgm</code> <b>installs</b>, <code>pkgx</code> <b>runs</b> without installing, and <code>pkgs</code> <b>answers about</b> packages — <code>ls</code>, <code>search</code>, <code>why</code>, <code>catalog</code>, <code>store</code>, <code>browse</code>, and <code>request</code> when a package is <i>not</i> there, which prints a report you can open as an issue and <b>sends nothing</b>. The last two ship from one release: the word after <code>pkgx</code> is a <b>package</b>, as it is upstream, so <code>pkgx ls</code> runs GNU ls and the verbs needed a command of their own.</p>
+    <p class="lead"><code>zpkgm</code> <b>installs</b>, <code>zpkgx</code> <b>runs</b> without installing, and <code>zpkgs</code> <b>answers about</b> packages — <code>ls</code>, <code>search</code>, <code>why</code>, <code>catalog</code>, <code>store</code>, <code>browse</code>, and <code>request</code> when a package is <i>not</i> there, which prints a report you can open as an issue and <b>sends nothing</b>. The last two ship from one release: the word after <code>zpkgx</code> is a <b>package</b>, as it is upstream, so <code>zpkgx ls</code> runs GNU ls and the verbs needed a command of their own.</p>
     <div class="grid">
       <div class="card">
         <div class="ico">🐧</div><h3>Linux / macOS</h3>
-<pre><code>curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.8.0
-curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx v0.31.0
-curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgs v0.31.0</code></pre>
+<pre><code>curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgm v0.9.0
+curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgx v0.32.0
+curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgs v0.32.0</code></pre>
       </div>
       <div class="card">
         <div class="ico">🪟</div><h3>Windows (PowerShell)</h3>
-<pre><code>$env:PKGM_VERSION='v0.8.0'
-irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
+<pre><code>$env:ZPKGM_VERSION='v0.9.0'
+irm https://go-zpkg.github.io/install.ps1 | iex</code></pre>
       </div>
       <div class="card wide">
         <div class="ico">🔁</div><h3>Tracking releases, and updating</h3>
-        <p>Write <code>latest</code> where the version goes — which is also what a bare <code>| sh</code> has always done. Re-running <i>is</i> the updater: it skips the download when the target version is already installed, and <code>PKGM_FORCE=1</code> reinstalls anyway. Go users: <code>go install github.com/go-pkgx/pkgm@latest</code>.</p>
+        <p>Write <code>latest</code> where the version goes — which is also what a bare <code>| sh</code> has always done. Re-running <i>is</i> the updater: it skips the download when the target version is already installed, and <code>ZPKGM_FORCE=1</code> reinstalls anyway. Go users: <code>go install github.com/go-zpkg/zpkgm@latest</code>.</p>
       </div>
     </div>
   </div></section>
 
   <section id="features"><div class="wrap">
-    <span class="eyebrow">Why go-pkgx</span>
+    <span class="eyebrow">Why go-zpkg</span>
     <h2>A package manager that owns its own environment.</h2>
     <p class="lead">Every dependency a packaging tool shells out to is a dependency the packages it installs have to coexist with. Removing them is not tidiness — it is what makes an empty image a valid target.</p>
     <div class="grid">
@@ -107,14 +107,14 @@ irm https://go-pkgx.github.io/install.ps1 | iex</code></pre>
     <h2>A tree you can walk, offline, in an empty image.</h2>
     <p class="lead">nix, guix and spack all let you browse what exists before you install it. Here the same thing works where none of them run: a single static binary, a catalogue cached as one file, and no network after the first fetch. <code>&lt;TAB&gt;</code> answers in <b>3.8&nbsp;ms</b> — median of 300 runs in a <code>FROM scratch</code> container with the network off, measured 2026-10-11 against a floor of 3.05&nbsp;ms for starting the process at all — because nothing on that path opens a socket, and because since v0.16.0 it reads a 38&nbsp;KB name index instead of decoding the 470&nbsp;KB catalogue.</p>
     <div class="term">
-      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">pkgs — zsh</span></div>
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">zpkgs — zsh</span></div>
 <pre><span class="c-com"># once, with a network. Then never again.</span>
-<span class="c-cmd">$</span> pkgs catalog update
+<span class="c-cmd">$</span> zpkgs catalog update
 1965 project(s) → ~/.pkgx/catalog/linux-x86-64.json
 1965 name(s) → ~/.pkgx/catalog/linux-x86-64.names (what tab-completion reads)
 
 <span class="c-com"># a namespace lists what it CONTAINS, a package what it NEEDS</span>
-<span class="c-cmd">$</span> pkgs ls --tree curl.se
+<span class="c-cmd">$</span> zpkgs ls --tree curl.se
 curl.se — 8.20  ✓
   curl.se/ca-certs  2026.10.20  ✓ 2026.09.25
   nghttp2.org  1.70.0  ✓
@@ -122,18 +122,18 @@ curl.se — 8.20  ✓
     curl.se/ca-certs  (shown above)
   zlib.net  1.3.2  ✓
 
-also a namespace, 3 under it: pkgs ls curl.se/
+also a namespace, 3 under it: zpkgs ls curl.se/
 
 <span class="c-com"># you know the command, not the package</span>
-<span class="c-cmd">$</span> pkgs search rg
+<span class="c-cmd">$</span> zpkgs search rg
 crates.io/ripgrep                        rg  15.2.0  ✓ 15.1.0
 
 <span class="c-com"># and the other direction: who NEEDS this, before you change it</span>
-<span class="c-cmd">$</span> pkgs ls --dependents openssl.org
+<span class="c-cmd">$</span> zpkgs ls --dependents openssl.org
 …
 runtime dependents on linux/x86-64; a build-only user is in no catalogue
 
-<span class="c-cmd">$</span> pkgs why git-scm.org zlib.net
+<span class="c-cmd">$</span> zpkgs why git-scm.org zlib.net
 git-scm.org — 2.55.0  ✓ 2.47.1
   → zlib.net — 1.3.2  ✓
 </pre>
@@ -142,9 +142,9 @@ git-scm.org — 2.55.0  ✓ 2.47.1
       <div class="card"><div class="ico">🌳</div><h3>A node has two kinds of thing under it</h3><p><code>gnu.org</code> contains <code>gnu.org/bash</code> because of how it is <b>named</b>; <code>curl.se</code> has <code>openssl.org</code> under it because of what it <b>needs</b>. nix and guix keep the two in separate commands; here the node decides, because the person typing already knows which they named.</p></div>
       <div class="card"><div class="ico">⌨️</div><h3>The binary answers &lt;TAB&gt;</h3><p>Spack generates a completion file and commits it — <code>spack-completion.bash</code> says &ldquo;auto-generated&hellip; please do not manually modify&rdquo; in its own header — and keeps it honest with a test called <code>test_updated_completion_scripts</code>. guix hand-writes one per shell: three files, 9&nbsp;KB of bash, 33&nbsp;KB of zsh, 78&nbsp;KB of fish, each with its own authors and no generator to compare against. Nix has the binary answer — <code>NIX_GET_COMPLETIONS</code> carries the argument index, in <code>src/libutil/args.cc</code> — and so does this — because what is being completed is the <b>registry</b>, which changes without the binary changing, and because there is no completion framework in an empty image.</p></div>
       <div class="card"><div class="ico">🔭</div><h3>Everything is named; what is here is marked</h3><p>A catalogue is published <b>per platform</b>: 537 of 1908 projects had no bottle for darwin/aarch64 on the 2026-10-06 catalogue above — the registry publishes 1965 today. Dropping those names would say they do not exist, which is false. Marking them says what to build next.</p></div>
-      <div class="card"><div class="ico">🖥️</div><h3>And a full-screen browser</h3><p><code>pkgs browse</code> walks it with the arrow keys, <code>/</code> searches, space pins — and <code>q</code> prints what you pinned on stdout, so <code>pkgx +$(pkgs browse)</code> composes. <code>tab</code> cycles <b>three</b> views of the node you are standing on: what it <b>contains</b>, what it <b>needs</b>, and who <b>needs it</b>. Without a terminal it prints the tree and exits.</p></div>
-      <div class="card"><div class="ico">💾</div><h3>And what it has cost you</h3><p>A <code>✓</code> is per project; <code>pkgs store</code> is the whole disk. One developer's machine on 2026-10-08: <b>41.2&nbsp;GiB</b> over 363 versions of 302 projects, <b>13 versions of gohugo.io</b>, 12.8&nbsp;GiB in versions that are not the newest present. Every ephemeral run leaves its bottles behind and nothing removes one. It <b>reports and deletes nothing</b> — there is no profile here, so no roots, and nix, guix and spack all draw that line too.</p></div>
-      <div class="card"><div class="ico">↩️</div><h3>The two questions that do not descend</h3><p><code>ls --dependents</code> asks who <b>needs</b> this — the question before <b>changing</b> something, where every tree above answers the one before installing. <b>164</b> of 1908 projects needed openssl on linux/aarch64 and 854 transitively, against 153 and 789 on darwin/aarch64 — same 2026-10-06 catalogue — because a catalogue records what a platform really carries. <code>pkgs why A B</code> is Nix's third question: not what is in the closure but which link put it there, as a <b>shortest</b> path.</p></div>
+      <div class="card"><div class="ico">🖥️</div><h3>And a full-screen browser</h3><p><code>zpkgs browse</code> walks it with the arrow keys, <code>/</code> searches, space pins — and <code>q</code> prints what you pinned on stdout, so <code>zpkgx +$(zpkgs browse)</code> composes. <code>tab</code> cycles <b>three</b> views of the node you are standing on: what it <b>contains</b>, what it <b>needs</b>, and who <b>needs it</b>. Without a terminal it prints the tree and exits.</p></div>
+      <div class="card"><div class="ico">💾</div><h3>And what it has cost you</h3><p>A <code>✓</code> is per project; <code>zpkgs store</code> is the whole disk. One developer's machine on 2026-10-08: <b>41.2&nbsp;GiB</b> over 363 versions of 302 projects, <b>13 versions of gohugo.io</b>, 12.8&nbsp;GiB in versions that are not the newest present. Every ephemeral run leaves its bottles behind and nothing removes one. It <b>reports and deletes nothing</b> — there is no profile here, so no roots, and nix, guix and spack all draw that line too.</p></div>
+      <div class="card"><div class="ico">↩️</div><h3>The two questions that do not descend</h3><p><code>ls --dependents</code> asks who <b>needs</b> this — the question before <b>changing</b> something, where every tree above answers the one before installing. <b>164</b> of 1908 projects needed openssl on linux/aarch64 and 854 transitively, against 153 and 789 on darwin/aarch64 — same 2026-10-06 catalogue — because a catalogue records what a platform really carries. <code>zpkgs why A B</code> is Nix's third question: not what is in the closure but which link put it there, as a <b>shortest</b> path.</p></div>
     </div>
   </div></section>
 
@@ -153,7 +153,7 @@ git-scm.org — 2.55.0  ✓ 2.47.1
     <h2>The same build, later.</h2>
     <p class="lead">The same pantry commit resolved tcl to <b>9.0.4</b> and then to <b>9.1.0</b> four hours apart, because a recipe asks GitHub at resolution time. <code>bk lock</code> writes down what a set means <i>today</i> — Spack's shape, not Spack's contents — Spack calls its own the <code>dag_hash</code>, &ldquo;Spack's default hash, used to identify installations&rdquo;, and its code notes that what the hash covers has changed twice across releases. Ours is over the platform, the version and the parsed recipe, so a recipe edited <b>under</b> a pin is visible where a version alone would say nothing.</p>
     <div class="cards">
-      <div class="card"><div class="ico">📌</div><h3>Every pin is a root</h3><p><code>pkgx --lock f.hcl</code> runs exactly those versions and <code>bk factory --lock f.hcl</code> builds them — not just the lock's own roots, so a transitive dependency cannot move underneath. A set that will not resolve exactly <b>fails</b>, as cargo's <code>--locked</code> does.</p></div>
+      <div class="card"><div class="ico">📌</div><h3>Every pin is a root</h3><p><code>zpkgx --lock f.hcl</code> runs exactly those versions and <code>bk factory --lock f.hcl</code> builds them — not just the lock's own roots, so a transitive dependency cannot move underneath. A set that will not resolve exactly <b>fails</b>, as cargo's <code>--locked</code> does.</p></div>
       <div class="card"><div class="ico">🧭</div><h3>It knows where it was taken</h3><p>A lock records its platform and refuses to be honoured elsewhere, by name. The versions a platform carries are not the versions another has, and failing late inside a resolver would blame a version instead of the lock.</p></div>
     </div>
   </div></section>
@@ -161,33 +161,33 @@ git-scm.org — 2.55.0  ✓ 2.47.1
   <section id="modules"><div class="wrap">
     <span class="eyebrow">Environments and HPC</span>
     <h2>A module system, without Lmod.</h2>
-    <p class="lead">A module system does two things: it resolves what a package needs, and it edits your shell. <code>pkgx +a +b</code> already did the first. <code>pkge</code> does the second — a front-end shaped like Lmod's, over pkgx's own resolution, with no Lua interpreter and no modulefile tree. It ships inside the <code>pkgs</code> binary — <code>eval "$(pkgs env init)"</code> defines it; there is nothing else to install.</p>
+    <p class="lead">A module system does two things: it resolves what a package needs, and it edits your shell. <code>zpkgx +a +b</code> already did the first. <code>zpkge</code> does the second — a front-end shaped like Lmod's, over zpkgx's own resolution, with no Lua interpreter and no modulefile tree. It ships inside the <code>zpkgs</code> binary — <code>eval "$(zpkgs env init)"</code> defines it; there is nothing else to install.</p>
     <div class="term">
-      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">pkge — zsh</span></div>
-<pre><span class="c-cmd">$ eval</span> "$(pkgs env init)"          <span class="c-com"># in a profile</span>
-<span class="c-cmd">$ pkge load</span> stedolan.github.io/jq
+      <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">zpkge — zsh</span></div>
+<pre><span class="c-cmd">$ eval</span> "$(zpkgs env init)"          <span class="c-com"># in a profile</span>
+<span class="c-cmd">$ zpkge load</span> stedolan.github.io/jq
 <span class="c-cmd">$ command -v</span> jq
 <span class="c-out">~/.pkgx/stedolan.github.io/jq/v1.8.2/bin/jq</span>
-<span class="c-cmd">$ pkge unload</span> stedolan.github.io/jq
+<span class="c-cmd">$ zpkge unload</span> stedolan.github.io/jq
 <span class="c-cmd">$ command -v</span> jq
 <span class="c-out">/usr/bin/jq</span>                        <span class="c-com"># back, exactly as it was</span></pre>
     </div>
     <div class="grid">
       <div class="card"><div class="ico">↩️</div><h3>Unloading is exact</h3><p>Because loading never edits incrementally: it restores the environment it first saw and recomposes from the whole spec set. So <code>unload b</code> after <code>load a b c</code> leaves precisely what <code>load a c</code> would have — whatever order things happened in.</p></div>
-      <div class="card"><div class="ico">🤝</div><h3>It defers to a real Lmod</h3><p>Where a site already runs one, publish modulefiles — <code>pkgx --modulefile +openmpi.org@5</code> — and let the site's own Lmod load them, so conflicts, hierarchies and <code>spider</code> keep working.</p></div>
-      <div class="card"><div class="ico">🚫</div><h3>And refuses to shadow it</h3><p><code>pkgs env init --module</code> defines <code>module</code> and <code>ml</code> only where there is no Lmod. Two implementations answering one command is how a support ticket becomes unanswerable.</p></div>
+      <div class="card"><div class="ico">🤝</div><h3>It defers to a real Lmod</h3><p>Where a site already runs one, publish modulefiles — <code>zpkgx --modulefile +openmpi.org@5</code> — and let the site's own Lmod load them, so conflicts, hierarchies and <code>spider</code> keep working.</p></div>
+      <div class="card"><div class="ico">🚫</div><h3>And refuses to shadow it</h3><p><code>zpkgs env init --module</code> defines <code>module</code> and <code>ml</code> only where there is no Lmod. Two implementations answering one command is how a support ticket becomes unanswerable.</p></div>
     </div>
   </div></section>
 
   <section id="registry"><div class="wrap">
     <span class="eyebrow">Provenance</span>
     <h2>A signed, attested package registry.</h2>
-    <p class="lead">The org runs its own bottle registry at <code>ghcr.io/go-pkgx/packages</code>. A pure-Go factory builds pkgx pantry recipes with <b>bk</b>, a CGO-free re-implementation of brewkit, and publishes through two channels: the signed OCI registry and a GitHub Pages <code>pkgx-dist</code> mirror.</p>
+    <p class="lead">The org runs its own bottle registry at <code>ghcr.io/go-pkgx/packages</code>. A pure-Go factory builds zpkgx pantry recipes with <b>bk</b>, a CGO-free re-implementation of brewkit, and publishes through two channels: the signed OCI registry and a GitHub Pages <code>zpkgx-dist</code> mirror.</p>
     <div class="grid">
-      <div class="card"><div class="ico">🔏</div><h3>Fail-closed by default</h3><p>Each bottle carries, as OCI referrers, a CycloneDX SBOM, an in-toto SLSA provenance statement and a cosign-style signature verified against a pinned key. On install <code>PKGX_VERIFY=1</code> refuses an unsigned or badly-signed bottle.</p></div>
+      <div class="card"><div class="ico">🔏</div><h3>Fail-closed by default</h3><p>Each bottle carries, as OCI referrers, a CycloneDX SBOM, an in-toto SLSA provenance statement and a cosign-style signature verified against a pinned key. On install <code>ZPKG_VERIFY=1</code> refuses an unsigned or badly-signed bottle.</p></div>
       <div class="card"><div class="ico">📥</div><h3>What went in, not only what came out</h3><p>The provenance records the source archive's SHA-256 (or a git commit) as well as the artefact. Over half this pantry builds from tarballs GitHub <i>generates</i> on request rather than stores, so for those it is the first stored record they have ever had.</p></div>
-      <div class="card"><div class="ico">🧱</div><h3>Built where nothing leaks in</h3><p>Linux builds run inside a FROM-scratch rootfs staged from bottles — no distribution libc and no distribution compiler take part. The output carries its <code>PT_INTERP</code> into the pkgx prefix and no distribution strings at all.</p></div>
-      <div class="card"><div class="ico">🪦</div><h3>An abandoned release line is not a CVE</h3><p>A CVE feed answers <i>what is known to be wrong</i>. A line upstream has abandoned has nothing known about it, because nobody is looking and no fix is coming — so a clean scan is exactly what you get. <code>^3</code> used to mean "the newest 3.x", and on <b>2026-11-01</b> that was openssl <b>3.6.4</b>, whose line reached its end of life <i>that day</i>, while the 3.5 LTS sat in the same registry supported to <b>2030-04-08</b>. Since pkgx v0.30.0 the resolver prefers a supported line: <code>^3</code> gives <b>3.5.8</b>. A <b>rank</b>, not a filter — <code>=3.6.4</code> and every lock still resolve, and say so on stderr, because reproducibility outranks the preference. Of the nine openssl lines this registry publishes, seven are end-of-life.</p></div>
+      <div class="card"><div class="ico">🧱</div><h3>Built where nothing leaks in</h3><p>Linux builds run inside a FROM-scratch rootfs staged from bottles — no distribution libc and no distribution compiler take part. The output carries its <code>PT_INTERP</code> into the zpkgx prefix and no distribution strings at all.</p></div>
+      <div class="card"><div class="ico">🪦</div><h3>An abandoned release line is not a CVE</h3><p>A CVE feed answers <i>what is known to be wrong</i>. A line upstream has abandoned has nothing known about it, because nobody is looking and no fix is coming — so a clean scan is exactly what you get. <code>^3</code> used to mean "the newest 3.x", and on <b>2026-11-01</b> that was openssl <b>3.6.4</b>, whose line reached its end of life <i>that day</i>, while the 3.5 LTS sat in the same registry supported to <b>2030-04-08</b>. Since zpkgx v0.30.0 the resolver prefers a supported line: <code>^3</code> gives <b>3.5.8</b>. A <b>rank</b>, not a filter — <code>=3.6.4</code> and every lock still resolve, and say so on stderr, because reproducibility outranks the preference. Of the nine openssl lines this registry publishes, seven are end-of-life.</p></div>
       <div class="card"><div class="ico">🔑</div><h3>No long-lived credential</h3><p>Publishing uses the workflow's native <code>GITHUB_TOKEN</code>, never a personal token, and every <code>(project, version, platform)</code> already present is skipped, so the catalogue grows progressively rather than being rebuilt.</p></div>
       <div class="card"><div class="ico">🚦</div><h3>Whose compiler built it, and a gate that defaults to no</h3><p>A signature says the bytes are ours; a source digest says what went in. Neither says <b>whose compiler produced them</b> — and bringing up an architecture from nothing starts with one generation that borrows the host's, which is why those bottles go to a throwaway registry and never leave it. The provenance now records the verdict and the registry the inputs came from, so <code>bk origin --promotable</code> can gate a promotion into the real registry. ⛔ It requires an explicit <i>no host toolchain</i> and refuses <b>every</b> other answer, silence included: refusing a good bottle costs a rebuild, while promoting a host-built one puts an unpinned distribution compiler's output in the registry <b>under our signature</b>. The recorded value is a tri-state and not a boolean for exactly that reason — a boolean's zero reads as "not a bootstrap", so every bottle published before the field existed would have claimed to be promotable.</p></div>
     </div>
@@ -197,10 +197,10 @@ git-scm.org — 2.55.0  ✓ 2.47.1
     <div class="band">
       <h2>Packaging that ships like Go.</h2>
       <p>No cgo, no interpreter, no runtime to install first. One static binary per job, a backend they share, and bottles that say where they came from.</p>
-      <a class="btn btn-ghost" href="https://github.com/go-pkgx">{{ partial "icons/github.html" . }}Read the source on GitHub →</a>
+      <a class="btn btn-ghost" href="https://github.com/go-zpkg">{{ partial "icons/github.html" . }}Read the source on GitHub →</a>
     </div>
   </div></section>
 
-  <footer><div class="wrap"><span>© the go-pkgx authors · BSD-3-Clause</span><span>Pure Go · CGO_ENABLED=0 · runs on FROM scratch</span></div></footer>
+  <footer><div class="wrap"><span>© the go-zpkg authors · BSD-3-Clause</span><span>Pure Go · CGO_ENABLED=0 · runs on FROM scratch</span></div></footer>
 </body>
 </html>

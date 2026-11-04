@@ -1,4 +1,4 @@
-module github.com/go-pkgx/go-pkgx.github.io/tools/versioncheck
+module github.com/go-zpkg/go-zpkg.github.io/tools/versioncheck
 
 go 1.27.2
 

@@ -1,6 +1,6 @@
-# go-pkgx.github.io
+# go-zpkg.github.io
 
-The landing page for [go-pkgx](https://github.com/go-pkgx), built with Hugo and
+The landing page for [go-zpkg](https://github.com/go-zpkg), built with Hugo and
 deployed by GitHub Actions.
 
 It uses the `go-*` family layout: `layouts/partials/styles.html` for the whole
@@ -116,7 +116,7 @@ stage before building, and both assert the manifest reached `public/`.
 
 `go-authn` and `go-fileshare` carry byte-identical copies of this stylesheet
 with cyan written into it. That is *their* colour: both their logos are the
-cyan gradient `#22CCE2 → #0079A8`. go-pkgx's logo is amber, `#F59E0B →
+cyan gradient `#22CCE2 → #0079A8`. go-zpkg's logo is amber, `#F59E0B →
 #B45309`, so a third copy would have differed from the other two in one block
 of colours — which is how a shared stylesheet stops being shared.
 

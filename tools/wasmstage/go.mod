@@ -1,9 +1,9 @@
-module github.com/go-pkgx/go-pkgx.github.io/tools/wasmstage
+module github.com/go-zpkg/go-zpkg.github.io/tools/wasmstage
 
 go 1.27.3
 
 require (
-	github.com/go-pkgx/bottle v0.62.1
+	github.com/go-zpkg/bottle v0.62.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 

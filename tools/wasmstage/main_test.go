@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-pkgx/bottle"
+	"github.com/go-zpkg/bottle"
 )
 
 // wasmModule is the smallest thing debug-free tooling and a browser both
@@ -419,7 +419,7 @@ func TestDeriveTakesTheProjectListFromTheCatalogue(t *testing.T) {
 }
 
 // ⛔ A CATALOGUE IT CANNOT READ IS A FAILURE, NEVER A BUILT-IN LIST. Before
-// go-pkgx/packages' weekly catalogue job has published wasip1/wasm once, this
+// go-zpkg/packages' weekly catalogue job has published wasip1/wasm once, this
 // is the error; a fallback here would serve a page that looks current and is
 // not, which is the failure tools/versioncheck was written for.
 func TestACatalogueItCannotReadIsAFailureNotABuiltInList(t *testing.T) {

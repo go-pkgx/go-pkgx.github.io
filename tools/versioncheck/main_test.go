@@ -31,12 +31,12 @@ func tree(files map[string]string) fs.FS {
 
 func TestRunPassesWhenEveryPinIsCurrent(t *testing.T) {
 	root := tree(map[string]string{
-		"layouts/index.html": "sh -s -- pkgm v0.1.7\nsh -s -- pkgx v0.1.10\n$env:PKGM_VERSION='v0.1.7'\n",
-		"static/install.sh":  "#   … | sh -s -- pkgm v0.1.7\n",
-		"static/install.ps1": "  .\\install.ps1 pkgx v0.1.10\n",
+		"layouts/index.html": "sh -s -- zpkgm v0.1.7\nsh -s -- zpkgx v0.1.10\n$env:ZPKGM_VERSION='v0.1.7'\n",
+		"static/install.sh":  "#   … | sh -s -- zpkgm v0.1.7\n",
+		"static/install.ps1": "  .\\install.ps1 zpkgx v0.1.10\n",
 	})
 	var out strings.Builder
-	if err := run(root, stub(map[string]string{"pkgm": "v0.1.7", "pkgx": "v0.1.10"}), &out); err != nil {
+	if err := run(root, stub(map[string]string{"zpkgm": "v0.1.7", "zpkgx": "v0.1.10"}), &out); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	if !strings.Contains(out.String(), "5 version(s) checked against 2 release(s)") {
@@ -47,13 +47,13 @@ func TestRunPassesWhenEveryPinIsCurrent(t *testing.T) {
 // The case this tool exists for: exactly what the site said on 2026-10-04.
 func TestRunNamesEveryPinThatFellBehind(t *testing.T) {
 	root := tree(map[string]string{
-		"layouts/index.html": "sh -s -- pkgm v0.1.4\nsh -s -- pkgx v0.1.5\n",
+		"layouts/index.html": "sh -s -- zpkgm v0.1.4\nsh -s -- zpkgx v0.1.5\n",
 	})
-	err := run(root, stub(map[string]string{"pkgm": "v0.1.7", "pkgx": "v0.1.10"}), &strings.Builder{})
+	err := run(root, stub(map[string]string{"zpkgm": "v0.1.7", "zpkgx": "v0.1.10"}), &strings.Builder{})
 	if err == nil {
 		t.Fatal("run: nil; want a failure naming both pins")
 	}
-	for _, want := range []string{"layouts/index.html:1", "pkgm v0.1.4", "released v0.1.7", "layouts/index.html:2", "pkgx v0.1.5", "released v0.1.10"} {
+	for _, want := range []string{"layouts/index.html:1", "zpkgm v0.1.4", "released v0.1.7", "layouts/index.html:2", "zpkgx v0.1.5", "released v0.1.10"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error does not mention %q:\n%s", want, err)
 		}
@@ -63,8 +63,8 @@ func TestRunNamesEveryPinThatFellBehind(t *testing.T) {
 // A version AHEAD of the latest release is not an error: a release can be
 // drafted and the page updated in the same change.
 func TestRunAcceptsAPinAheadOfTheRelease(t *testing.T) {
-	root := tree(map[string]string{"layouts/index.html": "sh -s -- pkgm v0.2.0\n"})
-	if err := run(root, stub(map[string]string{"pkgm": "v0.1.7"}), &strings.Builder{}); err != nil {
+	root := tree(map[string]string{"layouts/index.html": "sh -s -- zpkgm v0.2.0\n"})
+	if err := run(root, stub(map[string]string{"zpkgm": "v0.1.7"}), &strings.Builder{}); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 }
@@ -79,7 +79,7 @@ func TestRunFailsWhenItFindsNothing(t *testing.T) {
 }
 
 func TestRunReportsAnUnreachableRelease(t *testing.T) {
-	root := tree(map[string]string{"layouts/index.html": "sh -s -- pkgm v0.1.7\n"})
+	root := tree(map[string]string{"layouts/index.html": "sh -s -- zpkgm v0.1.7\n"})
 	err := run(root, func(string) (string, error) { return "", errors.New("403 rate limited") }, &strings.Builder{})
 	if err == nil || !strings.Contains(err.Error(), "403 rate limited") {
 		t.Fatalf("run: %v; want the fetch error named", err)
@@ -89,15 +89,15 @@ func TestRunReportsAnUnreachableRelease(t *testing.T) {
 // Semver, not string order: v0.1.10 is NEWER than v0.1.5, and a lexical
 // comparison says the opposite.
 func TestRunComparesNumericallyNotLexically(t *testing.T) {
-	root := tree(map[string]string{"layouts/index.html": "sh -s -- pkgx v0.1.10\n"})
-	if err := run(root, stub(map[string]string{"pkgx": "v0.1.5"}), &strings.Builder{}); err != nil {
+	root := tree(map[string]string{"layouts/index.html": "sh -s -- zpkgx v0.1.10\n"})
+	if err := run(root, stub(map[string]string{"zpkgx": "v0.1.5"}), &strings.Builder{}); err != nil {
 		t.Fatalf("v0.1.10 reported as behind v0.1.5: %v", err)
 	}
 }
 
 func TestCollectSkipsAMissingPath(t *testing.T) {
 	// `content` is in the scanned set and absent from this tree.
-	pins, err := collect(tree(map[string]string{"layouts/index.html": "sh -s -- pkgm v0.1.7\n"}))
+	pins, err := collect(tree(map[string]string{"layouts/index.html": "sh -s -- zpkgm v0.1.7\n"}))
 	if err != nil {
 		t.Fatalf("collect: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestARateLimitSaysNothingWasCompared(t *testing.T) {
 	apiBase = srv.URL
 	defer func() { apiBase = old }()
 
-	_, err := latestRelease("pkgm")
+	_, err := latestRelease("zpkgm")
 	if err == nil {
 		t.Fatal("a 403 must still be an error")
 	}
@@ -148,7 +148,7 @@ func TestAPlainForbiddenIsNotCalledARateLimit(t *testing.T) {
 	apiBase = srv.URL
 	defer func() { apiBase = old }()
 
-	_, err := latestRelease("pkgm")
+	_, err := latestRelease("zpkgm")
 	if err == nil {
 		t.Fatal("want an error")
 	}
@@ -172,7 +172,7 @@ func TestTheTokenTravelsInTheHeaderOnly(t *testing.T) {
 	apiBase = srv.URL
 	defer func() { apiBase = old }()
 
-	got, err := latestRelease("pkgm")
+	got, err := latestRelease("zpkgm")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +201,7 @@ func TestNoTokenMeansNoHeader(t *testing.T) {
 	apiBase = srv.URL
 	defer func() { apiBase = old }()
 
-	if _, err := latestRelease("pkgm"); err != nil {
+	if _, err := latestRelease("zpkgm"); err != nil {
 		t.Fatal(err)
 	}
 	if had || seen != "" {
@@ -209,26 +209,26 @@ func TestNoTokenMeansNoHeader(t *testing.T) {
 	}
 }
 
-// ⛔ `pkgs` SHIPS FROM go-pkgx/pkgx, AND BOTH HALVES OF THAT MATTER.
+// ⛔ `zpkgs` SHIPS FROM go-zpkg/zpkgx, AND BOTH HALVES OF THAT MATTER.
 //
-// The loud half: asking GitHub for /repos/go-pkgx/pkgs would 404, and this
+// The loud half: asking GitHub for /repos/go-zpkg/zpkgs would 404, and this
 // tool would report the site stale against a release that does not exist.
 //
-// The quiet half, and the worse one: a `pkgs v0.22.1` install line that no
+// The quiet half, and the worse one: a `zpkgs v0.22.1` install line that no
 // pattern matches is a pin NOTHING TRACKS. It is never reported behind,
 // which is indistinguishable from being current — and this tool exists
 // because exactly that happened for eight days.
 func TestPkgsIsTrackedAndAsksThePkgxRepository(t *testing.T) {
-	if got := repoOf("pkgs"); got != "pkgx" {
-		t.Errorf("repoOf(pkgs) = %q, want pkgx", got)
+	if got := repoOf("zpkgs"); got != "zpkgx" {
+		t.Errorf("repoOf(zpkgs) = %q, want zpkgx", got)
 	}
-	for _, tool := range []string{"pkgm", "pkgx", "mirror"} {
+	for _, tool := range []string{"zpkgm", "zpkgx", "mirror"} {
 		if got := repoOf(tool); got != tool {
 			t.Errorf("repoOf(%s) = %q, want itself", tool, got)
 		}
 	}
 
-	// The request really goes to the pkgx repository.
+	// The request really goes to the zpkgx repository.
 	var asked string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		asked = r.URL.Path
@@ -238,17 +238,17 @@ func TestPkgsIsTrackedAndAsksThePkgxRepository(t *testing.T) {
 	old := apiBase
 	apiBase = srv.URL
 	defer func() { apiBase = old }()
-	if _, err := latestRelease("pkgs"); err != nil {
+	if _, err := latestRelease("zpkgs"); err != nil {
 		t.Fatal(err)
 	}
-	if asked != "/repos/go-pkgx/pkgx/releases/latest" {
-		t.Errorf("latestRelease(pkgs) asked %q", asked)
+	if asked != "/repos/go-zpkg/zpkgx/releases/latest" {
+		t.Errorf("latestRelease(zpkgs) asked %q", asked)
 	}
 
-	// And the scan SEES a pkgs pin, in both shapes the site uses.
+	// And the scan SEES a zpkgs pin, in both shapes the site uses.
 	for _, line := range []string{
-		`curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgs v0.22.1`,
-		`$env:PKGS_VERSION='v0.22.1'`,
+		`curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgs v0.22.1`,
+		`$env:ZPKGS_VERSION='v0.22.1'`,
 	} {
 		if !rePositional.MatchString(line) && !reEnvVar.MatchString(line) {
 			t.Errorf("no pattern matches %q — that pin would never be checked", line)

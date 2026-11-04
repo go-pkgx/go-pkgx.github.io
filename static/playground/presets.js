@@ -1,6 +1,6 @@
 // The one invocation per module that is KNOWN to work.
 //
-// These are not examples somebody thought up: go-pkgx/packages runs exactly
+// These are not examples somebody thought up: go-zpkg/packages runs exactly
 // these arguments, with exactly these files and this stdin, under wasmtime
 // before it publishes the bottle — `.github/workflows/wasip1.yml` for the Go
 // lane and `wasip1-c.yml` for the C and C++ one. A default the page invented
@@ -22,7 +22,7 @@ export const PRESETS = {
   minigzip: { args: [], stdin: "hello wasip1\n", files: { "t.txt": "hello wasip1\n" } },
   // simdjson-minify was here until 2026-10-31. It is withdrawn with its
   // fixture, not merely unstaged: its registry tag serves two different modules
-  // at different times (go-pkgx/packages#393), so nothing can confront it.
+  // at different times (go-zpkg/packages#393), so nothing can confront it.
   //
   // A preset for a module no fixture confronts is caught by
   // TestPagePresetsAreTheConfrontedInvocations, which is how this line was
