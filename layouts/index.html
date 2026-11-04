@@ -153,7 +153,7 @@ git-scm.org — 2.55.0  ✓ 2.47.1
     <h2>The same build, later.</h2>
     <p class="lead">The same pantry commit resolved tcl to <b>9.0.4</b> and then to <b>9.1.0</b> four hours apart, because a recipe asks GitHub at resolution time. <code>bk lock</code> writes down what a set means <i>today</i> — Spack's shape, not Spack's contents — Spack calls its own the <code>dag_hash</code>, &ldquo;Spack's default hash, used to identify installations&rdquo;, and its code notes that what the hash covers has changed twice across releases. Ours is over the platform, the version and the parsed recipe, so a recipe edited <b>under</b> a pin is visible where a version alone would say nothing.</p>
     <div class="cards">
-      <div class="card"><div class="ico">📌</div><h3>Every pin is a root</h3><p><code>zpkgx --lock f.hcl</code> runs exactly those versions and <code>bk factory --lock f.hcl</code> builds them — not just the lock's own roots, so a transitive dependency cannot move underneath. A set that will not resolve exactly <b>fails</b>, as cargo's <code>--locked</code> does.</p></div>
+      <div class="card"><div class="ico">📌</div><h3>Every pin is a root</h3><p><code>zpkgx --lock f.hcl</code> runs exactly those versions and <code>zbk factory --lock f.hcl</code> builds them — not just the lock's own roots, so a transitive dependency cannot move underneath. A set that will not resolve exactly <b>fails</b>, as cargo's <code>--locked</code> does.</p></div>
       <div class="card"><div class="ico">🧭</div><h3>It knows where it was taken</h3><p>A lock records its platform and refuses to be honoured elsewhere, by name. The versions a platform carries are not the versions another has, and failing late inside a resolver would blame a version instead of the lock.</p></div>
     </div>
   </div></section>
@@ -182,7 +182,7 @@ git-scm.org — 2.55.0  ✓ 2.47.1
   <section id="registry"><div class="wrap">
     <span class="eyebrow">Provenance</span>
     <h2>A signed, attested package registry.</h2>
-    <p class="lead">The org runs its own bottle registry at <code>ghcr.io/go-pkgx/packages</code>. A pure-Go factory builds zpkgx pantry recipes with <b>bk</b>, a CGO-free re-implementation of brewkit, and publishes through two channels: the signed OCI registry and a GitHub Pages <code>zpkgx-dist</code> mirror.</p>
+    <p class="lead">The org runs its own bottle registry at <code>ghcr.io/go-pkgx/packages</code>. A pure-Go factory builds pkgx pantry recipes with <b>zbk</b>, a CGO-free re-implementation of brewkit, and publishes through two channels: the signed OCI registry and a GitHub Pages <code>zpkgx-dist</code> mirror.</p>
     <div class="grid">
       <div class="card"><div class="ico">🔏</div><h3>Fail-closed by default</h3><p>Each bottle carries, as OCI referrers, a CycloneDX SBOM, an in-toto SLSA provenance statement and a cosign-style signature verified against a pinned key. On install <code>ZPKG_VERIFY=1</code> refuses an unsigned or badly-signed bottle.</p></div>
       <div class="card"><div class="ico">📥</div><h3>What went in, not only what came out</h3><p>The provenance records the source archive's SHA-256 (or a git commit) as well as the artefact. Over half this pantry builds from tarballs GitHub <i>generates</i> on request rather than stores, so for those it is the first stored record they have ever had.</p></div>
