@@ -1,4 +1,4 @@
-module github.com/go-pkgx/go-pkgx.github.io
+module github.com/go-zpkg/go-zpkg.github.io
 
 go 1.27.3
 

@@ -1,7 +1,7 @@
 # Stage the registry's wasip1/wasm modules and publish the site carrying them.
 #
 # ⛔ SCHEDULED, NOT ON PUSH, and that is the whole point. A new wasip1/wasm
-# bottle is published in go-pkgx/packages — a DIFFERENT repository — so a job
+# bottle is published in go-zpkg/packages — a DIFFERENT repository — so a job
 # that fires on a push to THIS one cannot see the event that changes the
 # answer. tools/versioncheck's header makes exactly this argument about
 # version pins, and lost a week to it: on 2026-10-04 the site told visitors to
@@ -14,7 +14,7 @@
 # a SUBSET of what exists is indistinguishable from a small catalogue, and no
 # test written against a fixture can tell them apart. The `confront` job below
 # compares the derived list against the factory's own lane files in
-# go-pkgx/packages. See tools/wasmstage/confront_test.go.
+# go-zpkg/packages. See tools/wasmstage/confront_test.go.
 #
 # ⛔ SILENCE IS NOT GREEN. GitHub disables a `schedule` trigger after 60 days
 # with no activity in the repository, and says so only in a one-off email to
@@ -42,7 +42,7 @@ name: stage the wasm playground
 
 on:
   schedule:
-    # Monday, after the catalogue. go-pkgx/packages publishes the wasip1/wasm
+    # Monday, after the catalogue. go-zpkg/packages publishes the wasip1/wasm
     # catalogue weekly at 05:00 UTC on Monday ('0 5 * * 1'); this runs ~100
     # minutes later so it reads that run's output and not the previous week's.
     # Weekly and not daily on purpose: the source of truth moves weekly, and a
@@ -94,7 +94,7 @@ jobs:
   # Every other test drives `-derive` against a catalogue the test itself
   # wrote, so none of them can tell a correct derivation from one that
   # silently returns a subset: six of seven projects yields a valid manifest,
-  # a page that renders and nothing red. This job asks go-pkgx/packages what
+  # a page that renders and nothing red. This job asks go-zpkg/packages what
   # its wasip1 lanes actually build (the matrix entries of wasip1.yml and
   # wasip1-c.yml) and compares.
   #

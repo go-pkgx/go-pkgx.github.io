@@ -100,12 +100,12 @@ func main() {
 		// working directory made every module unreadable and scanned the tool
 		// itself as if it were the root.
 		path := filepath.Join(*root, filepath.FromSlash(dir))
-		pkgs, err := buildablePackages(path)
+		zpkgs, err := buildablePackages(path)
 		if err != nil {
 			results = append(results, result{dir, unread, err.Error()})
 			continue
 		}
-		if pkgs == 0 {
+		if zpkgs == 0 {
 			results = append(results, result{dir, skipped, "go list ./... matches no packages: nothing to scan"})
 			continue
 		}

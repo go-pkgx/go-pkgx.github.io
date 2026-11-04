@@ -20,7 +20,7 @@
 <!-- Names a few examples rather than the whole set: the set is derived from the
      published catalogue at build time and grew from 7 projects to 34 on
      2026-10-31, so an exhaustive list here would be wrong by the next lane run. -->
-<meta name="description" content="Run the go-pkgx factory's wasip1/wasm modules in your browser — shfmt, sqlite3, lua, minigzip, age, go-md2man — on a WASI preview1 host written for this page and confronted with wasmtime.">
+<meta name="description" content="Run the go-zpkg factory's wasip1/wasm modules in your browser — shfmt, sqlite3, lua, minigzip, age, go-md2man — on a WASI preview1 host written for this page and confronted with wasmtime.">
 <link rel="icon" type="image/svg+xml" href="{{ "favicon.svg" | relURL }}">
 {{ partial "styles.html" . }}
 {{ partial "site-styles.html" . }}
@@ -28,11 +28,11 @@
 </head>
 <body class="lm">
   <header class="nav"><div class="wrap">
-    <a class="brand" href="{{ "/" | relURL }}"><img class="glyph" src="{{ "img/logo.svg" | relURL }}" width="32" height="32" alt="go-pkgx logo"> go-pkgx</a>
-    <nav><a href="{{ "/" | relURL }}">Home</a><a href="{{ "/#registry" | relURL }}">Registry</a><a href="https://go-pkgx.github.io/packages/">Packages</a><a href="https://go-pkgx.github.io/docs/">Docs</a></nav>
+    <a class="brand" href="{{ "/" | relURL }}"><img class="glyph" src="{{ "img/logo.svg" | relURL }}" width="32" height="32" alt="go-zpkg logo"> go-zpkg</a>
+    <nav><a href="{{ "/" | relURL }}">Home</a><a href="{{ "/#registry" | relURL }}">Registry</a><a href="https://go-zpkg.github.io/packages/">Packages</a><a href="https://go-zpkg.github.io/docs/">Docs</a></nav>
     {{ partial "theme-toggle.html" . }}
   </div></header>
-  {{ partial "fork-ribbon.html" "https://github.com/go-pkgx/packages" }}
+  {{ partial "fork-ribbon.html" "https://github.com/go-zpkg/packages" }}
 
   <section><div class="wrap">
     <span class="eyebrow">Playground</span>
@@ -53,7 +53,7 @@
         <p>That is a build that did not finish, not a platform with nothing on it. The eight
            modules <em>are</em> published: <code>ghcr.io/go-pkgx/packages</code> carries them under
            the OCI platform <code>os=wasip1, architecture=wasm</code>, and
-           <code>pkgx --platform wasip1/wasm</code> will fetch them for a local
+           <code>zpkgx --platform wasip1/wasm</code> will fetch them for a local
            <code>wasmtime</code> in the meantime.</p>
       </div>
 
@@ -107,7 +107,7 @@
     </div>
   </div></section>
 
-  <footer><div class="wrap"><span>© the go-pkgx authors · BSD-3-Clause</span><span>Pure Go · CGO_ENABLED=0 · runs on FROM scratch</span></div></footer>
+  <footer><div class="wrap"><span>© the go-zpkg authors · BSD-3-Clause</span><span>Pure Go · CGO_ENABLED=0 · runs on FROM scratch</span></div></footer>
   <script type="module" src="{{ "playground/app.js" | relURL }}"></script>
 </body>
 </html>

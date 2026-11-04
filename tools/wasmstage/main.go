@@ -3,7 +3,7 @@
 //
 // # Why a staging step exists at all
 //
-// ⛔ ghcr.io DOES NOT DO CORS, so a page served from go-pkgx.github.io cannot
+// ⛔ ghcr.io DOES NOT DO CORS, so a page served from go-zpkg.github.io cannot
 // pull a bottle from it. Measured 2026-10-29:
 //
 //	GET  /token?scope=…        200, and no access-control-allow-origin
@@ -24,11 +24,11 @@
 // # Why the project list is DERIVED, not typed
 //
 // ⛔ A HAND-TYPED LIST DRIFTS EXACTLY LIKE A VERSION PIN. `tools/versioncheck`
-// exists in this very repository because the install section named pkgm v0.1.4
-// and pkgx v0.1.5 while the releases were v0.1.7 and v0.1.10: nobody mistyped
+// exists in this very repository because the install section named zpkgm v0.1.4
+// and zpkgx v0.1.5 while the releases were v0.1.7 and v0.1.10: nobody mistyped
 // anything, the world moved and the file did not. Seven project names typed
 // into a workflow are the same object. The eighth wasip1/wasm bottle will be
-// published in go-pkgx/packages — a DIFFERENT repository — and a list living
+// published in go-zpkg/packages — a DIFFERENT repository — and a list living
 // here would go on naming seven with nothing anywhere going red.
 //
 // So `-derive` asks the published wasip1/wasm catalogue what exists, and the
@@ -38,7 +38,7 @@
 // ⛔ AND IT FAILS RATHER THAN FALL BACK. There is deliberately no built-in
 // list behind `-derive`: a page quietly showing last month's set is
 // indistinguishable from a current one, while a run that stops says what it
-// could not ask. Before go-pkgx/packages' weekly catalogue job has published
+// could not ask. Before go-zpkg/packages' weekly catalogue job has published
 // wasip1/wasm for the first time, the fetch fails with "platform not in
 // index" — and that is the correct, loud outcome, not a reason for a cached
 // answer.
@@ -72,7 +72,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-pkgx/bottle"
+	"github.com/go-zpkg/bottle"
 )
 
 // The one platform this command is about. Named rather than repeated, because
@@ -142,7 +142,7 @@ var errNoFallback = errors.New(`there is deliberately NO built-in project list t
   a page quietly showing last month's set is indistinguishable from a current one,
   while a run that stops says what it could not ask -- the same reason
   tools/versioncheck exists rather than a comment asking people to check the pins.
-  The catalogue is published weekly by go-pkgx/packages as ` + bottle.CatalogProjectName + `
+  The catalogue is published weekly by go-zpkg/packages as ` + bottle.CatalogProjectName + `
   for ` + stageOS + `/` + stageArch + `; before that job has run once, this is what "platform not in
   index" looks like, and the answer is to wait for it, not to invent a list`)
 
@@ -453,7 +453,7 @@ func versionOf(rel, project string) string {
 // isWasm reports whether a file begins with the WebAssembly magic number.
 //
 // ⛔ THE NAME IS A HYPOTHESIS, THE FIRST FOUR BYTES ARE THE FACT — the same
-// rule go-pkgx/bk arrived at the hard way, having counted a GDB
+// rule go-zpkg/bk arrived at the hard way, having counted a GDB
 // pretty-printer called `libstdc++.so.6.0.33-gdb.py` as a shared library and
 // then refused a real `libfolly.so.0.58.0-dev` for its version suffix.
 func isWasm(path string) (bool, error) {

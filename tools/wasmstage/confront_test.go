@@ -13,7 +13,7 @@
 // that genuinely holds six.
 //
 // So the answer is confronted with the ground truth, which lives in another
-// repository: go-pkgx/packages/.github/workflows/wasip1.yml (the Go lane) and
+// repository: go-zpkg/packages/.github/workflows/wasip1.yml (the Go lane) and
 // wasip1-c.yml (the C/C++ lane). Their `matrix.include` entries ARE the set of
 // projects built and published for wasip1/wasm — read 2026-10-30:
 //
@@ -30,7 +30,7 @@
 //	BUILT BUT NOT DERIVED: github.com/simdjson/simdjson
 //
 // The discriminator below settles it: wasip1-c.yml has listed simdjson since
-// 2026-10-26 19:35 (go-pkgx/packages#377), four days BEFORE that catalogue was
+// 2026-10-26 19:35 (go-zpkg/packages#377), four days BEFORE that catalogue was
 // generated, so this is not a lane that moved after the snapshot. And the
 // bottle is there — a pinned `wasmstage … github.com/simdjson/simdjson`
 // installs v5.0.5 and stages 432 531 bytes that pass the \0asm check. So the
@@ -46,7 +46,7 @@
 // ⛔ AND THE GROUND TRUTH IS FETCHED, NOT COPIED. A set of seven names pasted
 // into this file would be a hand-typed list guarding a hand-typed list — the
 // exact defect `-derive` exists to remove. The lane files are read over the
-// network, at the version go-pkgx/packages serves now. The names above are a
+// network, at the version go-zpkg/packages serves now. The names above are a
 // dated observation for a human reader, and nothing compares against them.
 //
 // ⛔ WHICH IS WHY THIS NEEDS A NETWORK, AND SAYS SO. It is skipped unless
@@ -73,8 +73,8 @@ import (
 // wasip1/wasm. Read from the default branch, because that is what the next
 // scheduled run of the factory will use.
 var laneFiles = []string{
-	"https://raw.githubusercontent.com/go-pkgx/packages/main/.github/workflows/wasip1.yml",
-	"https://raw.githubusercontent.com/go-pkgx/packages/main/.github/workflows/wasip1-c.yml",
+	"https://raw.githubusercontent.com/go-zpkg/packages/main/.github/workflows/wasip1.yml",
+	"https://raw.githubusercontent.com/go-zpkg/packages/main/.github/workflows/wasip1-c.yml",
 }
 
 // lane is the part of a factory workflow this reads: every job's matrix
@@ -191,7 +191,7 @@ func TestTheComparisonCanSeeADisagreement(t *testing.T) {
 // is asked what it builds; the two sets must be the same set.
 func TestTheDerivedListMatchesWhatTheFactoryBuilds(t *testing.T) {
 	if os.Getenv("WASMSTAGE_CONFRONT") != "1" {
-		t.Skip("set WASMSTAGE_CONFRONT=1 — this one reaches the registry and go-pkgx/packages")
+		t.Skip("set WASMSTAGE_CONFRONT=1 — this one reaches the registry and go-zpkg/packages")
 	}
 
 	var declared []string
@@ -211,7 +211,7 @@ func TestTheDerivedListMatchesWhatTheFactoryBuilds(t *testing.T) {
 	cat, err := fetchCatalog(stageOS, stageArch)
 	if err != nil {
 		t.Fatalf("the %s/%s catalogue could not be read: %v\n"+
-			"If this is \"platform not in index\", go-pkgx/packages' catalogue job has not published this platform yet — wait for it. That is a MISSING measurement, not a passing one, which is why this is a failure and not a skip.",
+			"If this is \"platform not in index\", go-zpkg/packages' catalogue job has not published this platform yet — wait for it. That is a MISSING measurement, not a passing one, which is why this is a failure and not a skip.",
 			stageOS, stageArch, err)
 	}
 	derived, err := derive(stageOS, stageArch)

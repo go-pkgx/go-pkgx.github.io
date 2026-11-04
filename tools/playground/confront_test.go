@@ -85,7 +85,7 @@ func TestFixturesWellFormed(t *testing.T) {
 	//
 	// This said eight until 2026-10-31, when simdjson-minify was withdrawn
 	// because its registry tag serves two different modules at different times
-	// (go-pkgx/packages#393). Lowering a floor is exactly how a population
+	// (go-zpkg/packages#393). Lowering a floor is exactly how a population
 	// quietly shrinks, so the floor is paired with a requirement that the file
 	// SAY why: a future reduction to six has to explain itself in the same
 	// place, and a restoration has to remove the note.

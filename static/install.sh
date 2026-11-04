@@ -1,25 +1,26 @@
 #!/bin/sh
-# go-pkgx installer — the pure-Go pkgx family (pkgm, pkgx, pkgs, mirror).
+# go-zpkg installer — the pure-Go pkgx family (zpkgm, zpkgx, zpkgs, mirror).
 #
-#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm v0.8.0
-#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgm latest
-#   curl -fsSL https://go-pkgx.github.io/install.sh | sh            # pkgm, latest
-#   curl -fsSL https://go-pkgx.github.io/install.sh | sh -s -- pkgx # another tool
+#   curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgm v0.9.0
+#   curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgm latest
+#   curl -fsSL https://go-zpkg.github.io/install.sh | sh            # zpkgm, latest
+#   curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgx # another tool
 #
-# Selects one of {pkgm, pkgx, pkgs, mirror}, downloads its static, dependency-free
-# binary for your os/arch from a GitHub release, verifies it against the release
-# SHA256SUMS, and installs it. Idempotent: re-running is the updater — it
-# resolves the target version and skips the download if that version is already
-# installed (so `curl … | sh` on a cron is a safe self-update).
+# Selects one of {zpkgm, zpkgx, zpkgs, mirror}, downloads its static,
+# dependency-free binary for your os/arch from a GitHub release, verifies it
+# against the release SHA256SUMS, and installs it. Idempotent: re-running is
+# the updater — it resolves the target version and skips the download if that
+# version is already installed (so `curl … | sh` on a cron is a safe
+# self-update).
 #
-# Tool selection (default: pkgm, so the bare one-liner is unchanged):
-#   sh -s -- <tool>   positional argument (pkgm | pkgx | pkgs | mirror)
+# Tool selection (default: zpkgm, so the bare one-liner installs the installer):
+#   sh -s -- <tool>   positional argument (zpkgm | zpkgx | zpkgs | mirror)
 #
-# pkgx and pkgs are the two halves of one program and ship from ONE release:
-# pkgx RUNS a package, pkgs ANSWERS about one (ls, search, why, catalog,
-# store, browse, compat, env, completion). Install both, or pkgs's verbs
+# zpkgx and zpkgs are the two halves of one program and ship from ONE release:
+# zpkgx RUNS a package, zpkgs ANSWERS about one (ls, search, why, catalog,
+# store, browse, compat, env, completion). Install both, or zpkgs's verbs
 # have nowhere to go.
-#   PKGX_TOOL=<tool>  environment variable (or TOOL=<tool>)
+#   ZPKG_TOOL=<tool>  environment variable (or TOOL=<tool>)
 #
 # Version selection (second positional argument, or the env knob below):
 #   sh -s -- <tool> v0.1.3   a NAMED release — what the docs pin, so a line
@@ -31,7 +32,7 @@
 #                            `| sh` has always done, and existing pipelines
 #                            keep doing)
 #
-# Env knobs (per-tool prefix, e.g. PKGM_*, PKGX_*, MIRROR_*; a tool-agnostic
+# Env knobs (per-tool prefix, e.g. ZPKGM_*, ZPKGX_*, MIRROR_*; a tool-agnostic
 # TOOL_* is honoured as a fallback):
 #   <TOOL>_INSTALL / TOOL_INSTALL   install directory (default: $HOME/.local/bin)
 #   <TOOL>_VERSION / TOOL_VERSION   install a specific version (e.g. v0.1.0 or
@@ -41,35 +42,42 @@
 #                                   silently redirected by an exported variable.
 #   <TOOL>_FORCE   / TOOL_FORCE     set to 1 to re-download/reinstall even if
 #                                   already current
-# (PKGM_INSTALL / PKGM_VERSION / PKGM_FORCE keep working for the default tool.)
 #
-# BSD-3-Clause © the go-pkgx authors.
+# BSD-3-Clause © the go-zpkg authors.
 set -eu
 
 # --- select the tool ---------------------------------------------------------
-tool="${1:-${PKGX_TOOL:-${TOOL:-pkgm}}}"
+#
+# ⛔⛔ THIS FILE IS SERVED, SO IT BREAKS BEFORE ANYTHING ELSE DOES. Every
+# README's one-liner curls it, and it is the first thing a new user runs. The
+# go-zpkg → go-zpkg rename moved all twelve repositories; until this landed,
+# https://go-zpkg.github.io/install.sh answered 200 and then fetched releases
+# from `go-zpkg/<tool>`, an organisation that now holds no repositories at all.
+# A rule table could not see it: the repository name is ASSEMBLED at run time
+# from a variable, and there is no string `go-zpkg/pkgm` anywhere to match.
+tool="${1:-${ZPKG_TOOL:-${TOOL:-zpkgm}}}"
 case "$tool" in
-  pkgm|pkgx|pkgs|mirror) ;;
-  *) printf 'go-pkgx-install: unknown tool %s (choose one of: pkgm, pkgx, pkgs, mirror)\n' "'$tool'" >&2; exit 1 ;;
+  zpkgm|zpkgx|zpkgs|mirror) ;;
+  *) printf 'go-zpkg-install: unknown tool %s (choose one of: zpkgm, zpkgx, zpkgs, mirror)\n' "'$tool'" >&2; exit 1 ;;
 esac
 tool_upper=$(printf '%s' "$tool" | tr '[:lower:]' '[:upper:]')
 
 # ⛔ THE REPOSITORY IS NOT ALWAYS THE TOOL'S NAME. Three of the four are
-# their own repository; `pkgs` ships from go-pkgx/pkgx, because it is the
-# other half of the same program — pkgx runs packages, pkgs answers about
+# their own repository; `zpkgs` ships from go-zpkg/zpkgx, because it is the
+# other half of the same program — zpkgx runs packages, zpkgs answers about
 # them, and they share one resolver. Deriving the repo from the tool name
-# alone would have fetched from go-pkgx/pkgs, which does not exist, and the
+# alone would have fetched from go-zpkg/zpkgs, which does not exist, and the
 # failure a user would see is a 404 on a release rather than "that is not
 # where it lives".
 case "$tool" in
-  pkgs) REPO="go-pkgx/pkgx" ;;
-  *)    REPO="go-pkgx/${tool}" ;;
+  zpkgs) REPO="go-zpkg/zpkgx" ;;
+  *)     REPO="go-zpkg/${tool}" ;;
 esac
 
 err() { printf '%s-install: %s\n' "$tool" "$1" >&2; exit 1; }
 
-# Resolve a per-tool env knob: <TOOL_UPPER>_<SUFFIX> first (so PKGM_VERSION,
-# PKGX_FORCE, MIRROR_INSTALL keep working), then a tool-agnostic TOOL_<SUFFIX>.
+# Resolve a per-tool env knob: <TOOL_UPPER>_<SUFFIX> first (so ZPKGM_VERSION,
+# ZPKG_FORCE, MIRROR_INSTALL keep working), then a tool-agnostic TOOL_<SUFFIX>.
 tool_env() {
   # shellcheck disable=SC2154  # 'v' is assigned inside the eval'd expression
   eval "v=\${${tool_upper}_$1:-}"
@@ -194,23 +202,34 @@ case ":${PATH}:" in
 esac
 
 # --- per-tool next step ------------------------------------------------------
+#
+# ⛔ THESE ARMS MUST SPELL THE TOOLS THE VALIDATION ACCEPTS. They are matched
+# against the same `$tool` the `case` above has already restricted, so an arm
+# naming a tool that cannot reach here is unreachable — and it fails SILENTLY,
+# by printing nothing at all, which is the one failure mode a `| sh` one-liner
+# gives a user no way to notice. Leaving `pkgm)` here after the rename would
+# have done exactly that.
 case "$tool" in
-  pkgm)
-    printf '\nDone. Next:  pkgm install lz4.org\n' >&2
+  zpkgm)
+    printf '\nDone. Next:  zpkgm install lz4.org\n' >&2
     printf '(installs verify against the signed registry by default)\n' >&2
     ;;
-  pkgx)
-    printf '\nDone. Next:  pkgx node@22 --version\n' >&2
+  zpkgx)
+    printf '\nDone. Next:  zpkgx node@22 --version\n' >&2
     printf '(runs packages on the fly; verifies against the signed registry by default)\n' >&2
-    printf 'To ask ABOUT packages, install its other half:  … | sh -s -- pkgs\n' >&2
+    printf 'To ask ABOUT packages, install its other half:  … | sh -s -- zpkgs\n' >&2
     ;;
-  pkgs)
-    printf '\nDone. Next:  pkgs catalog update  &&  pkgs search rg\n' >&2
+  zpkgs)
+    printf '\nDone. Next:  zpkgs catalog update  &&  zpkgs search rg\n' >&2
     printf '(answers about packages — ls, search, why, store, browse, env)\n' >&2
-    printf 'To RUN one, install its other half:  … | sh -s -- pkgx\n' >&2
+    printf 'To RUN one, install its other half:  … | sh -s -- zpkgx\n' >&2
     ;;
   mirror)
     printf '\nDone. Next:  mirror agwa.name/git-crypt --dest ./m\n' >&2
     printf '(mirrors pkgx bottles for local/offline serving)\n' >&2
+    ;;
+  *)
+    printf '\n%s-install: no next step known for %s — the validation above and\n' "$tool" "$tool" >&2
+    printf 'this list have drifted apart.\n' >&2
     ;;
 esac

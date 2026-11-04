@@ -11,7 +11,7 @@
 #
 # ⛔ A FILE OF ITS OWN, and not because of a merge. playground.yml refreshes the
 # modules weekly and deploys; it fires on a `schedule` because the event that
-# changes its answer happens in go-pkgx/packages. This fires when the SHIM
+# changes its answer happens in go-zpkg/packages. This fires when the SHIM
 # changes, which is an event in this repository. One trigger set cannot serve
 # both: on playground.yml's schedule this would run 51 times a year against a
 # shim nobody touched, and on this file's paths that one would pull 21 MB for a

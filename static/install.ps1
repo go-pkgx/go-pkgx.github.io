@@ -1,36 +1,36 @@
 <#
 .SYNOPSIS
-  go-pkgx installer for Windows — the pure-Go pkgx family (pkgm, pkgx, pkgs, mirror).
+  go-zpkg installer for Windows — the pure-Go pkgx family (zpkgm, zpkgx, zpkgs, mirror).
 
 .DESCRIPTION
   Run:
 
-      $env:PKGM_VERSION='v0.8.0'; irm https://go-pkgx.github.io/install.ps1 | iex
-      irm https://go-pkgx.github.io/install.ps1 | iex                 # pkgm, latest
-      $env:PKGX_TOOL='pkgx'; irm https://go-pkgx.github.io/install.ps1 | iex
+      $env:ZPKGM_VERSION='v0.9.0'; irm https://go-zpkg.github.io/install.ps1 | iex
+      irm https://go-zpkg.github.io/install.ps1 | iex                 # zpkgm, latest
+      $env:ZPKG_TOOL='zpkgx'; irm https://go-zpkg.github.io/install.ps1 | iex
 
   A piped script takes no arguments, so on Windows the version is pinned with
   the environment variable above. Saved to disk, both are positional:
 
-      .\install.ps1 pkgx v0.31.0
-      .\install.ps1 pkgs v0.31.0
-      .\install.ps1 pkgx latest
+      .\install.ps1 zpkgx v0.32.0
+      .\install.ps1 zpkgs v0.32.0
+      .\install.ps1 zpkgx latest
 
-  Selects one of {pkgm, pkgx, pkgs, mirror}, downloads its static <tool>.exe for your
-  architecture from a GitHub release, verifies it against the release
-  SHA256SUMS, installs it to $env:LOCALAPPDATA\Programs\go-pkgx, and adds that
+  Selects one of {zpkgm, zpkgx, zpkgs, mirror}, downloads its static <tool>.exe
+  for your architecture from a GitHub release, verifies it against the release
+  SHA256SUMS, installs it to $env:LOCALAPPDATA\Programs\go-zpkg, and adds that
   directory to the user PATH. Idempotent: re-running is the updater — it
   resolves the target version and skips the download if that version is already
   installed.
 
-  Tool selection (default: pkgm, so the bare one-liner is unchanged):
-    .\install.ps1 <tool>   positional argument (pkgm | pkgx | mirror)
-    $env:PKGX_TOOL=<tool>  environment variable (or $env:TOOL=<tool>)
+  Tool selection (default: zpkgm):
+    .\install.ps1 <tool>   positional argument (zpkgm | zpkgx | zpkgs | mirror)
+    $env:ZPKG_TOOL=<tool>  environment variable (or $env:TOOL=<tool>)
 
-  Env knobs (per-tool prefix PKGM_*, PKGX_*, MIRROR_*; a tool-agnostic TOOL_*
+  Env knobs (per-tool prefix ZPKGM_*, ZPKGX_*, MIRROR_*; a tool-agnostic TOOL_*
   is honoured as a fallback):
     <TOOL>_INSTALL / TOOL_INSTALL   install directory (default:
-                                    $env:LOCALAPPDATA\Programs\go-pkgx)
+                                    $env:LOCALAPPDATA\Programs\go-zpkg)
     <TOOL>_VERSION / TOOL_VERSION   install a specific version (e.g. v0.1.0 or
                                     0.1.0), or 'latest'; default: the latest
                                     release. The -Version argument wins over
@@ -38,38 +38,43 @@
                                     silently redirected by an exported variable.
     <TOOL>_FORCE   / TOOL_FORCE     set to 1 to re-download/reinstall even if
                                     already current
-  (PKGM_VERSION / PKGM_FORCE keep working for the default tool.)
 
-  BSD-3-Clause (c) the go-pkgx authors.
+  BSD-3-Clause (c) the go-zpkg authors.
 #>
 param([string]$Tool, [string]$Version)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # --- select the tool ---------------------------------------------------------
+#
+# ⛔⛔ SERVED FILE, SO IT BREAKS FIRST. The go-zpkg → go-zpkg rename moved all
+# twelve repositories; until this landed, this script fetched releases from
+# `go-zpkg/<tool>`, an organisation that now holds none. The repository name is
+# ASSEMBLED at run time from a variable, so there is no literal `go-zpkg/pkgm`
+# anywhere for a rule table to match on.
 if (-not $Tool) {
-  if ($env:PKGX_TOOL)  { $Tool = $env:PKGX_TOOL }
+  if ($env:ZPKG_TOOL)  { $Tool = $env:ZPKG_TOOL }
   elseif ($env:TOOL)   { $Tool = $env:TOOL }
-  else                 { $Tool = 'pkgm' }
+  else                 { $Tool = 'zpkgm' }
 }
-if ($Tool -notin @('pkgm', 'pkgx', 'pkgs', 'mirror')) {
-  Write-Error "go-pkgx-install: unknown tool '$Tool' (choose one of: pkgm, pkgx, pkgs, mirror)"
+if ($Tool -notin @('zpkgm', 'zpkgx', 'zpkgs', 'mirror')) {
+  Write-Error "go-zpkg-install: unknown tool '$Tool' (choose one of: zpkgm, zpkgx, zpkgs, mirror)"
   exit 1
 }
 $toolUpper = $Tool.ToUpper()
-# The repository is not always the tool's name: pkgs ships from go-pkgx/pkgx,
+# The repository is not always the tool's name: zpkgs ships from go-zpkg/zpkgx,
 # because it is the other half of the same program. Deriving it from the name
 # alone would 404 on a release that does not exist, and read as "there is no
 # such version" rather than "that is not where it lives".
-$repo = if ($Tool -eq 'pkgs') { 'go-pkgx/pkgx' } else { "go-pkgx/$Tool" }
+$repo = if ($Tool -eq 'zpkgs') { 'go-zpkg/zpkgx' } else { "go-zpkg/$Tool" }
 
 function Fail([string]$msg) {
   Write-Error "${Tool}-install: $msg"
   exit 1
 }
 
-# Resolve a per-tool env knob: <TOOL_UPPER>_<SUFFIX> first (so PKGM_VERSION,
-# PKGX_FORCE, MIRROR_INSTALL keep working), then a tool-agnostic TOOL_<SUFFIX>.
+# Resolve a per-tool env knob: <TOOL_UPPER>_<SUFFIX> first (so ZPKGM_VERSION,
+# ZPKG_FORCE, MIRROR_INSTALL keep working), then a tool-agnostic TOOL_<SUFFIX>.
 function Get-ToolEnv([string]$suffix) {
   $v = [Environment]::GetEnvironmentVariable("${toolUpper}_$suffix")
   if (-not $v) { $v = [Environment]::GetEnvironmentVariable("TOOL_$suffix") }
@@ -86,7 +91,7 @@ switch ($rawArch) {
 
 $asset = "$Tool-windows-$arch.exe"
 $installDir = Get-ToolEnv 'INSTALL'
-if (-not $installDir) { $installDir = Join-Path $env:LOCALAPPDATA 'Programs\go-pkgx' }
+if (-not $installDir) { $installDir = Join-Path $env:LOCALAPPDATA 'Programs\go-zpkg' }
 $dest = Join-Path $installDir "$Tool.exe"
 
 # --- resolve the target version ----------------------------------------------
@@ -180,24 +185,31 @@ try {
   }
 
   Write-Host ''
+  # ⛔ THESE ARMS MUST SPELL THE TOOLS THE VALIDATION ACCEPTS. $Tool has
+  # already been restricted above, so an arm naming a tool that cannot reach
+  # here is unreachable and fails by printing NOTHING — the one failure mode an
+  # `irm | iex` one-liner gives a user no way to notice.
   switch ($Tool) {
-    'pkgm' {
-      Write-Host 'Done. Next:  pkgm install lz4.org'
+    'zpkgm' {
+      Write-Host 'Done. Next:  zpkgm install lz4.org'
       Write-Host '(installs verify against the signed registry by default)'
     }
-    'pkgx' {
-      Write-Host 'Done. Next:  pkgx node@22 --version'
+    'zpkgx' {
+      Write-Host 'Done. Next:  zpkgx node@22 --version'
       Write-Host '(runs packages on the fly; verifies against the signed registry by default)'
-      Write-Host "To ask ABOUT packages, install its other half: `$env:PKGX_TOOL='pkgs'"
+      Write-Host "To ask ABOUT packages, install its other half: `$env:ZPKG_TOOL='zpkgs'"
     }
-    'pkgs' {
-      Write-Host 'Done. Next:  pkgs catalog update  then  pkgs search rg'
+    'zpkgs' {
+      Write-Host 'Done. Next:  zpkgs catalog update  then  zpkgs search rg'
       Write-Host '(answers about packages - ls, search, why, store, browse, env)'
-      Write-Host "To RUN one, install its other half: `$env:PKGX_TOOL='pkgx'"
+      Write-Host "To RUN one, install its other half: `$env:ZPKG_TOOL='zpkgx'"
     }
     'mirror' {
       Write-Host 'Done. Next:  mirror agwa.name/git-crypt --dest ./m'
       Write-Host '(mirrors pkgx bottles for local/offline serving)'
+    }
+    default {
+      Write-Host "${Tool}-install: no next step known for $Tool - the validation above and this list have drifted apart."
     }
   }
 } finally {

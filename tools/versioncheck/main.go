@@ -5,9 +5,9 @@
 // should name a version: "a line copied today and the same line copied in six
 // months install the same bytes". That is a good argument and it is also a
 // maintenance obligation, and nobody met it. On 2026-10-04 the page told
-// visitors to install pkgm v0.1.4 and pkgx v0.1.5 while the releases were
+// visitors to install zpkgm v0.1.4 and zpkgx v0.1.5 while the releases were
 // v0.1.7 and v0.1.10 — three and five behind, and both predating two directory
-// traversal fixes in the shared tar extractor (go-pkgx/bottle#106, #107). A
+// traversal fixes in the shared tar extractor (go-zpkg/bottle#106, #107). A
 // pinned example that rots does not merely go stale: it hands people an old
 // build, which is worse than the unpinned form the installer already supports.
 //
@@ -50,28 +50,37 @@ type pin struct {
 // Two shapes carry a version here: the positional form the shell installer
 // takes, and the environment variable PowerShell needs because a piped script
 // gets no arguments.
+//
+// ⛔ BOTH EXPRESSIONS MOVED WITH THE RENAME, AND THE SECOND ONE IS THE TRAP.
+// The positional names were rewritten with everything else, but the env-var
+// prefixes are SHOUTED — `PKGM_VERSION` shares no text with `zpkgm` — so a
+// pass over the tool names leaves them untouched and nothing says so. A
+// `$env:ZPKGM_VERSION='v0.9.0'` line that no pattern matches is a pinned
+// install command NOTHING TRACKS: never reported behind, which looks exactly
+// like being current. That is the failure this whole tool exists to prevent,
+// so it must not be the failure the tool itself ships with.
 var (
-	rePositional = regexp.MustCompile(`\b(pkgm|pkgx|pkgs|mirror)\s+(v\d+\.\d+\.\d+)\b`)
-	reEnvVar     = regexp.MustCompile(`\b(PKGM|PKGX|PKGS|MIRROR)_VERSION\s*=\s*'?(v\d+\.\d+\.\d+)'?`)
+	rePositional = regexp.MustCompile(`\b(zpkgm|zpkgx|zpkgs|mirror)\s+(v\d+\.\d+\.\d+)\b`)
+	reEnvVar     = regexp.MustCompile(`\b(ZPKGM|ZPKGX|ZPKGS|MIRROR)_VERSION\s*=\s*'?(v\d+\.\d+\.\d+)'?`)
 )
 
 // repoOf is the repository a tool's releases come from.
 //
 // ⛔ IT IS NOT ALWAYS THE TOOL'S NAME, and getting that wrong fails in the
-// quieter of the two directions. `pkgs` ships from go-pkgx/pkgx — it is the
+// quieter of the two directions. `zpkgs` ships from go-zpkg/zpkgx — it is the
 // other half of the same program — so asking GitHub for
-// /repos/go-pkgx/pkgs/releases/latest would 404 and this check would call
+// /repos/go-zpkg/zpkgs/releases/latest would 404 and this check would call
 // the site stale about a release that does not exist.
 //
-// The other direction is worse and is why `pkgs` had to be added to the
-// expressions above at the same time: a `pkgs v0.22.1` line that no pattern
+// The other direction is worse and is why `zpkgs` had to be added to the
+// expressions above at the same time: a `zpkgs v0.22.1` line that no pattern
 // matches is a pinned install command NOTHING TRACKS. It would simply never
 // be reported behind, which is indistinguishable from being current — and
 // this whole tool exists because a pin that nobody watched sat eight days
 // out of date.
 func repoOf(tool string) string {
-	if tool == "pkgs" {
-		return "pkgx"
+	if tool == "zpkgs" {
+		return "zpkgx"
 	}
 	return tool
 }
@@ -80,15 +89,15 @@ func repoOf(tool string) string {
 // as opposed to mentioning a version in passing.
 //
 // ⛔ WITHOUT THIS, -fix CAN REWRITE A HISTORICAL CLAIM INTO A FALSE ONE.
-// rePositional matches `pkgx v0.16.0` anywhere in a scanned file, and
+// rePositional matches `zpkgx v0.16.0` anywhere in a scanned file, and
 // layouts/index.html is prose as well as install commands. A sentence like
-// "pkgx v0.16.0 added the name index" is a statement about the past; bumping
+// "zpkgx v0.16.0 added the name index" is a statement about the past; bumping
 // its version does not keep it current, it makes it wrong — silently, and in
 // the one place a reader is most likely to trust.
 //
 // Measured on this tree the day the guard was added: all four positional
-// matches are install invocations (`| sh -s -- pkgm v0.4.1`,
-// `.\install.ps1 pkgx v0.16.0`), so anchoring costs nothing today. It is for
+// matches are install invocations (`| sh -s -- zpkgm v0.4.1`,
+// `.\install.ps1 zpkgx v0.16.0`), so anchoring costs nothing today. It is for
 // the sentence nobody has written yet — and it is what makes `-fix` safe to
 // run unattended, which is the only way this file stops going stale between
 // releases.
@@ -239,7 +248,7 @@ func collect(root fs.FS) ([]pin, error) {
 			for i, line := range strings.Split(string(b), "\n") {
 				// The positional form only counts on a line that is
 				// installing something. See reInstalling: the env-var form
-				// needs no such test, because `PKGX_VERSION=v…` is never
+				// needs no such test, because `ZPKG_VERSION=v…` is never
 				// prose.
 				if reInstalling.MatchString(line) {
 					for _, m := range rePositional.FindAllStringSubmatch(line, -1) {
@@ -274,12 +283,12 @@ var apiBase = "https://api.github.com"
 // including in the errors below.
 func latestRelease(tool string) (string, error) {
 	c := &http.Client{Timeout: 30 * time.Second}
-	req, err := http.NewRequest(http.MethodGet, apiBase+"/repos/go-pkgx/"+repoOf(tool)+"/releases/latest", nil)
+	req, err := http.NewRequest(http.MethodGet, apiBase+"/repos/go-zpkg/"+repoOf(tool)+"/releases/latest", nil)
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "go-pkgx-versioncheck")
+	req.Header.Set("User-Agent", "go-zpkg-versioncheck")
 	if tok := githubToken(); tok != "" {
 		req.Header.Set("Authorization", "Bearer "+tok)
 	}
@@ -412,7 +421,7 @@ func fixPins(dir string, behind []pin, current map[string]string, out io.Writer)
 		// change is a disagreement between the two halves of this program,
 		// and the dangerous outcome is reporting success over it.
 		// Compared against the number of LINES, not of pins: two pins can
-		// sit on one line — `pkgx v0.9.0` beside `PKGM_VERSION='v0.2.2'`
+		// sit on one line — `zpkgx v0.9.0` beside `ZPKGM_VERSION='v0.2.2'`
 		// is a real line on this site — and counting pins here reported a
 		// disagreement that was arithmetic rather than a missed rewrite.
 		if changed != len(want) {

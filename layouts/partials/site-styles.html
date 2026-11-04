@@ -5,7 +5,7 @@
 <style>
   /* A <pre> inside a card had NO rule — only `.term pre` was styled — so a
      long command line did not wrap and simply ran out of the card. Two cards
-     holding a `curl … | sh -s -- pkgm v0.1.4` overflowed while the third,
+     holding a `curl … | sh -s -- zpkgm v0.1.4` overflowed while the third,
      which is prose, wrapped: the row read as three boxes of unrelated shape.
      pre-wrap plus break-word is what keeps a command inside its box at any
      width. */
@@ -19,7 +19,7 @@
   .card.wide{grid-column:1/-1}
   /* At 390px the page scrolled sideways by 79px: a grid item's minimum
      width is its min-content, and the repository cards hold unbreakable
-     tokens -- `ghcr.io/go-pkgx/packages`, `<https://go-pkgx.github.io/packages/>`
+     tokens -- `ghcr.io/go-pkgx/packages`, `<https://go-zpkg.github.io/packages/>`
      -- so the one-column grid grew past the viewport. Letting the card shrink
      and the token break keeps every card inside the screen. */
   .grid>.card{min-width:0}

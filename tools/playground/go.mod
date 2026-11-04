@@ -1,4 +1,4 @@
-module github.com/go-pkgx/go-pkgx.github.io/tools/playground
+module github.com/go-zpkg/go-zpkg.github.io/tools/playground
 
 go 1.27.3
 
