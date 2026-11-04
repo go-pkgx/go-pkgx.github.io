@@ -36,7 +36,7 @@
 <pre><span class="c-com"># an image whose ONLY file is the zpkgx binary</span>
 <span class="c-cmd">FROM</span> scratch
 <span class="c-cmd">COPY</span> zpkgx /bin/zpkgx
-<span class="c-cmd">ENV</span> ZPKG_DIR=/zpkgx
+<span class="c-cmd">ENV</span> ZPKG_DIR=/zpkg
 <span class="c-cmd">ENTRYPOINT</span> ["/bin/zpkgx"]
 
 <span class="c-com"># there is no shell in there, and no libc either</span>
@@ -62,13 +62,13 @@
     <div class="grid">
       <div class="card">
         <div class="ico">🐧</div><h3>Linux / macOS</h3>
-<pre><code>curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgm v0.9.0
+<pre><code>curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgm v0.10.0
 curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgx v0.32.0
 curl -fsSL https://go-zpkg.github.io/install.sh | sh -s -- zpkgs v0.32.0</code></pre>
       </div>
       <div class="card">
         <div class="ico">🪟</div><h3>Windows (PowerShell)</h3>
-<pre><code>$env:ZPKGM_VERSION='v0.9.0'
+<pre><code>$env:ZPKGM_VERSION='v0.10.0'
 irm https://go-zpkg.github.io/install.ps1 | iex</code></pre>
       </div>
       <div class="card wide">
@@ -110,8 +110,8 @@ irm https://go-zpkg.github.io/install.ps1 | iex</code></pre>
       <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="t">zpkgs — zsh</span></div>
 <pre><span class="c-com"># once, with a network. Then never again.</span>
 <span class="c-cmd">$</span> zpkgs catalog update
-1965 project(s) → ~/.pkgx/catalog/linux-x86-64.json
-1965 name(s) → ~/.pkgx/catalog/linux-x86-64.names (what tab-completion reads)
+1965 project(s) → ~/.zpkg/catalog/linux-x86-64.json
+1965 name(s) → ~/.zpkg/catalog/linux-x86-64.names (what tab-completion reads)
 
 <span class="c-com"># a namespace lists what it CONTAINS, a package what it NEEDS</span>
 <span class="c-cmd">$</span> zpkgs ls --tree curl.se
@@ -167,7 +167,7 @@ git-scm.org — 2.55.0  ✓ 2.47.1
 <pre><span class="c-cmd">$ eval</span> "$(zpkgs env init)"          <span class="c-com"># in a profile</span>
 <span class="c-cmd">$ zpkge load</span> stedolan.github.io/jq
 <span class="c-cmd">$ command -v</span> jq
-<span class="c-out">~/.pkgx/stedolan.github.io/jq/v1.8.2/bin/jq</span>
+<span class="c-out">~/.zpkg/stedolan.github.io/jq/v1.8.2/bin/jq</span>
 <span class="c-cmd">$ zpkge unload</span> stedolan.github.io/jq
 <span class="c-cmd">$ command -v</span> jq
 <span class="c-out">/usr/bin/jq</span>                        <span class="c-com"># back, exactly as it was</span></pre>
